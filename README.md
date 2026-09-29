@@ -19,7 +19,7 @@
 | Name                  | Student Number | GitHub username |
 |-----------------------|----------------|-----------------|
 | Nadine Seba           |    40300673    | Nadine-seb      |
-| Rada Arsan            |    40370448    |                 |
+| Rada Arsan            |    40370448    | cvwetw          |
 | Idriss Benabdessadek  |    40248720    | idrissben03     |
 | Gerom Fazaa           |    40274250    |                 |
 | Octavian Mihai        |    40304833    | Octavian-Mihai  |
