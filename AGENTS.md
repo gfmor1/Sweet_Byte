@@ -18,6 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Session hygiene:** `/clear` between unrelated tasks, `/compact` with a focus hint when context grows, prefer a smaller model (Sonnet/Haiku) for routine edits, and keep this file short — it is loaded every session.
 
+**Double-Check:** Ask questions when confused, don't assume you know what the user wants. Ask and double check when in doubt, in order not to output garbage and waste tokens
+
 ## Project status
 
 SweetByte is a SOEN 343 (Concordia) academic project: an online dessert ordering and delivery platform with four roles — customers, restaurants, couriers, and operators. The repository is currently a scaffold: there is no source code, build system, or tests yet, so there are no build/lint/test commands to document. Update this file once they exist.
