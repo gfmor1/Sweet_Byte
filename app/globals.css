@@ -1,0 +1,287 @@
+
+/* General website styling */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #fff7f8;
+  font-family: Arial, sans-serif;
+  color: #352631;
+}
+
+h1 {
+  color: #a52e60;
+  font-size: 36px;
+}
+
+h2 {
+  color: #713850;
+}
+
+h3 {
+  color: #382b31;
+}
+
+button {
+  background-color: #c74778;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background-color: #a52e60;
+}
+
+button:disabled {
+  background-color: #d5c7cc;
+  cursor: not-allowed;
+}
+
+input {
+  padding: 12px;
+  border: 1px solid #e3cbd4;
+  border-radius: 8px;
+  font-size: 15px;
+  max-width: 100%;
+}
+
+input:focus {
+  outline: 2px solid #c74778;
+}
+
+/* Main application */
+
+.app-shell {
+  max-width: 1150px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+.app-shell > button {
+  margin-right: 10px;
+  margin-bottom: 20px;
+}
+
+/* Login and Registration */
+
+.auth-page {
+  max-width: 440px;
+  margin: 50px auto;
+  padding: 35px;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 8px 28px #8d45621a;
+}
+
+.auth-page h2 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.auth-page form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-page input {
+  width: 100%;
+}
+
+.auth-page button {
+  width: 100%;
+}
+
+/* Customer Dashboard */
+
+.dashboard > h1 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.dashboard > h2 {
+  margin-top: 30px;
+}
+
+/* Restaurant cards */
+
+.restaurant-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
+}
+
+.restaurant-list > h2 {
+  grid-column: 1 / -1;
+}
+
+.restaurant-list > div {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 15px #8d456214;
+}
+
+.restaurant-list > div h3 {
+  margin-top: 0;
+}
+
+.restaurant-list > div button {
+  margin-top: 10px;
+}
+
+/* Selected restaurant */
+
+.menu-section {
+  margin-top: 30px;
+}
+
+.menu-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.menu-list > h2 {
+  grid-column: 1 / -1;
+}
+
+.menu-list > div {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #f0dce3;
+}
+
+/* Place order */
+
+.place-order {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  margin-top: 25px;
+}
+
+.place-order form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 18px;
+}
+
+.place-order form > div {
+  padding: 15px;
+  border: 1px solid #f0dce3;
+  border-radius: 10px;
+}
+
+.place-order input {
+  width: 100%;
+}
+
+.place-order form > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* Customer orders */
+
+.order-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 15px 0;
+  border-left: 5px solid #c74778;
+}
+
+/* Mobile screens */
+
+@media (max-width: 600px) {
+  .app-shell {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 28px;
+  }
+
+  .auth-page {
+    padding: 22px;
+    margin-top: 25px;
+  }
+}
+
+
+/* Improved restaurant menu */
+
+.menu-section {
+  max-width: 1100px;
+  margin: 30px auto;
+}
+
+.menu-section > h2 {
+  font-size: 32px;
+  margin-top: 30px;
+}
+
+.place-order {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.place-order form {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.place-order form > div {
+  background: white;
+  border: 1px solid #f1dce4;
+  border-radius: 18px;
+  padding: 25px;
+  box-shadow: 0 6px 20px rgba(90, 40, 60, 0.07);
+  transition: transform 0.2s;
+}
+
+.place-order form > div:hover {
+  transform: translateY(-4px);
+}
+
+.place-order form > div p:first-child {
+  font-size: 19px;
+  font-weight: bold;
+  color: #713850;
+}
+
+.place-order input {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.place-order form > button {
+  grid-column: 1 / -1;
+  padding: 16px 35px;
+  font-size: 16px;
+}
+
+@media (max-width: 800px) {
+  .place-order form {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .place-order form {
+    grid-template-columns: 1fr;
+  }
+}
