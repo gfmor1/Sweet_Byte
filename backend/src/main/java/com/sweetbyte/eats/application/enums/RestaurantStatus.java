@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.enums;
 //OPEN, PAUSED, CLOSED
-public class RestaurantStatus {
-    
+public enum RestaurantStatus {
+    OPEN, 
+    PAUSED,
+    CLOSED
 }

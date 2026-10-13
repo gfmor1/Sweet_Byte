@@ -1,5 +1,8 @@
 package com.sweetbyte.eats.application.enums;
 //OFFLINE, IDLE, ASSIGNED, CARRYING
-public class CourierStatus {
-    
+public enum CourierStatus {
+    OFFLINE,
+    IDLE,
+    ASSIGNED,
+    CARRYING
 }
