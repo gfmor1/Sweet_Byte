@@ -17,6 +17,15 @@ function handleLogin(event) {
       email: email,
       role: "customer"
     });
+  } else if (
+    email === "restaurant@sweetbyte.test" &&
+    password === "demo123"
+  ) {
+    onLoginSuccess({
+      email: email,
+      role: "restaurant",
+      restaurantId: 1
+    });
   } else {
     setMessage("Invalid email or password");
   }

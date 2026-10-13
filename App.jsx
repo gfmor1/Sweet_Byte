@@ -5,10 +5,14 @@ import { useState } from "react";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import CustomerDashboard from "./pages/CustomerDashboard";
+import RestaurantDashboard from "./pages/RestaurantDashboard";
+import { initialRestaurants } from "./data/restaurants";
 
 function App() {
   const [page, setPage] = useState("login");
   const [user, setUser] = useState(null);
+  const [restaurants, setRestaurants] = useState(initialRestaurants);
+  const [orders, setOrders] = useState([]);
 
   function handleLoginSuccess(loggedInUser) {
     setUser(loggedInUser);
@@ -25,7 +29,19 @@ function App() {
         <button onClick={handleLogout}>Logout</button>
 
         {user.role === "customer" ? (
-          <CustomerDashboard />
+          <CustomerDashboard
+            restaurants={restaurants}
+            orders={orders}
+            setOrders={setOrders}
+          />
+        ) : user.role === "restaurant" ? (
+          <RestaurantDashboard
+            restaurantId={user.restaurantId}
+            restaurants={restaurants}
+            setRestaurants={setRestaurants}
+            orders={orders}
+            setOrders={setOrders}
+          />
         ) : (
           <p>Dashboard not implemented yet.</p>
         )}
