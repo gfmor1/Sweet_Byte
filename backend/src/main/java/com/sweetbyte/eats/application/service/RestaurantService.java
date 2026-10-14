@@ -12,6 +12,15 @@ import java.util.List;
 @Service
 @Transactional
 public interface RestaurantService {
+    List<Restaurant> getAllRestaurants();
+
+    Restaurant getRestaurantByID(Long restaurantID);
+
+    Restaurant pauseRestaurant(Long RestaurantID);
+
+    Restaurant reOpenRestaurant(Long RestaurantID);
+
+    Restaurant changeStatus(Long RestaurantID, RestaurantStatus status);
 
 
     
