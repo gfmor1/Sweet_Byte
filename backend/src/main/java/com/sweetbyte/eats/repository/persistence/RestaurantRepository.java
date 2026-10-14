@@ -1,6 +1,11 @@
 package com.sweetbyte.eats.repository.persistence;
-//load, save and list restaurants.
 
-public class RestaurantRepository {
+import com.sweetbyte.eats.application.model.Restaurant;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface RestaurantRepository extends JpaRepository<Restaurant, Long>{
+
     
 }
