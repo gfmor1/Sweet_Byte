@@ -15,6 +15,6 @@ public interface OrderService {
     List<Order> getUsersOrders(User user);
     List<Order> getRestaurantOrders(Long restaurantId, User user);
     List<Order> getRestaurantOrdersByStatus(Long restaurantId, OrderStatus status, User user);
-    Order updateOrderStatus(Long orderId, OrderStatus newStatus, User user);
-    void cancelOrder(Long orderId, User user) throws Exception;
+    Order updateOrderStatus(Order order, OrderStatus newStatus, User user);
+    void cancelOrder(Long orderId, User user);
 }

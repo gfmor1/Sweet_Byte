@@ -17,7 +17,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderServiceImpl(OrderRepository orderRepository) {
         this.orderRepository = orderRepository; /* init order repo*/
     }
-    
+
     @Override
     public Order createOrder(Order order, User user) {
         // Implementation for creating an order
@@ -29,11 +29,6 @@ public class OrderServiceImpl implements OrderService {
         if (order.getOrderId() != null)
             throw new IllegalArgumentException("This order already exists");
         return orderRepository.save(order);
-    }
-
-    @Override
-    public void cancelOrder(Long orderId, User user) throws Exception {
-        // Implementation for canceling an order
     }
 
     @Override
@@ -61,8 +56,26 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Order updateOrderStatus(Long orderId, OrderStatus newStatus, User user) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateOrderStatus'");
+    public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+        if (newStatus == OrderStatus.ACCEPTED) 
+                order.accept();
+        if (newStatus == OrderStatus.PREPARING) 
+                order.startPreparing();
+        if (newStatus == OrderStatus.CANCELLED)
+                cancelOrder(order.getOrderId(), user);
+        return orderRepository.save(order);
+    }
+
+    @Override
+    public void cancelOrder(Long orderId, User user) {
+        // Implementation for canceling an order
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if (user.getRole().equals("CUSTOMER")) {
+            order.cancelByCustomer();
+        } else if (user.getRole().equals("OPERATOR")) {
+            order.cancelByOperator();
+        }
+        orderRepository.delete(order);
     }
 }
