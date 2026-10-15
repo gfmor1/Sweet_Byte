@@ -17,4 +17,5 @@ public interface OrderService {
     List<Order> getRestaurantOrdersByStatus(Long restaurantId, OrderStatus status, User user);
     Order updateOrderStatus(Order order, OrderStatus newStatus, User user);
     void cancelOrder(Long orderId, User user);
+    void checkRestaurantOrOperator(Order order, User user);
 }
