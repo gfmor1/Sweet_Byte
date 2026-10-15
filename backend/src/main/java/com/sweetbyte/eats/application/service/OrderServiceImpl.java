@@ -32,27 +32,28 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public List<Order> getUsersOrders(User user) {
         // Implementation for getting a user's orders
-        return null;
+        return orderRepository.findByCustomerUserId(user.getUserId());
     }
 
     @Override
+    @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
         // Implementation for getting a restaurant's orders
-        return null;
+        if (user.getRole() != Role.OPERATOR && restaurantId != user.getUserId())
+            // ===> check if restaurant id is the same as userid TODO
+            throw new IllegalArgumentException("User does not have permission to view this restaurant's orders");
+        return orderRepository.findByRestaurantId(restaurantId);
     }
 
     @Override
+    @Transactional
     public Order getOrder(Long orderId, User user) {
         // TODO Auto-generated method stub
+        // return orderRepository.findById(orderId).orElseThrow(() -> new IllegalArgumentException("Order not found"));
         throw new UnsupportedOperationException("Unimplemented method 'getOrder'");
-    }
-
-    @Override
-    public List<Order> getRestaurantOrdersByStatus(Long restaurantId, OrderStatus status, User user) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getRestaurantOrdersByStatus'");
     }
 
     @Transactional

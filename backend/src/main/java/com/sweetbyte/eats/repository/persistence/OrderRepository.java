@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.repository.persistence;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sweetbyte.eats.application.model.Order;
@@ -8,4 +10,7 @@ import com.sweetbyte.eats.application.model.Order;
 //and the role-scoped lists (orders by customer, orders by restaurant)
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    public List<Order> findByCustomerUserId(Long customerId);
+
+    public List<Order> findByRestaurantId(Long restaurantId);
 }
