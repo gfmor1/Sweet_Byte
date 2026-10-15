@@ -1,21 +1,34 @@
 package com.sweetbyte.eats.application.service;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
+import com.sweetbyte.eats.repository.persistence.OrderRepository;
 
 @Service 
 public class OrderServiceImpl implements OrderService {
+    /* OrderRepo instance */
+    private final OrderRepository orderRepository;
+    public OrderServiceImpl(OrderRepository orderRepository) {
+        this.orderRepository = orderRepository; /* init order repo*/
+    }
+    
     @Override
     public Order createOrder(Order order, User user) {
         // Implementation for creating an order
+        Objects.requireNonNull(order, "Order cannot be null");
+        Objects.requireNonNull(user, "User cannot be null");
 
-
-        return null;
+        if (order.getCustomer() == null || !order.getCustomer().equals(user))
+            throw new IllegalArgumentException("Order must belong to the user");
+        if (order.getOrderId() != null)
+            throw new IllegalArgumentException("This order already exists");
+        return orderRepository.save(order);
     }
 
     @Override
