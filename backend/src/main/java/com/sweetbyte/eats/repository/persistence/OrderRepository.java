@@ -2,6 +2,7 @@ package com.sweetbyte.eats.repository.persistence;
 
 import java.util.List;
 
+import com.sweetbyte.eats.application.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sweetbyte.eats.application.model.Order;
@@ -13,4 +14,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     public List<Order> findByCustomerUserId(Long customerId);
 
     public List<Order> findByRestaurantId(Long restaurantId);
+
+    public List<Order> findByRestaurantIDAndStatusAndOrderArrival(Long restaurantID, OrderStatus status);
 }
