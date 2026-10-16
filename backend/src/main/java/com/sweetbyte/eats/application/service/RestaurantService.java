@@ -1,27 +1,31 @@
 package com.sweetbyte.eats.application.service;
 
 import com.sweetbyte.eats.application.enums.RestaurantStatus;
-import com.sweetbyte.eats.application.exceptions.NotFoundException;
+import com.sweetbyte.eats.application.model.PreparationQueue;
 import com.sweetbyte.eats.application.model.Restaurant;
-import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 
 import java.util.List;
 
-@Service
-@Transactional
+
 public interface RestaurantService {
     List<Restaurant> getAllRestaurants();
 
     Restaurant getRestaurantByID(Long restaurantID);
 
-    Restaurant pauseRestaurant(Long RestaurantID);
+    Restaurant pauseRestaurant(Long restaurantID);
 
-    Restaurant reOpenRestaurant(Long RestaurantID);
+    Restaurant reOpenRestaurant(Long restaurantID);
 
-    Restaurant changeStatus(Long RestaurantID, RestaurantStatus status);
+    Restaurant changeStatus(Long restaurantID, RestaurantStatus status);
 
+    PreparationQueue getPreparationQueue(Long restaurantID);
 
-    
+    void acceptOrder(Long restaurantID, Long orderID);
+
+    void declineOrder(Long restaurantID, Long orderID, String reason);
+
+    void confirmPickup(Long restaurantID, Long orderID, String courierCode);
+
+    int getQueueSize(Long restaurantID);
 }
