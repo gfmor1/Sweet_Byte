@@ -2,13 +2,12 @@ package com.sweetbyte.eats.application.service;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
-import jakarta.transaction.Transactional;
-
 @Service 
 public class OrderServiceImpl implements OrderService {
     /* OrderRepo instance */
@@ -42,7 +41,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
         // Implementation for getting a restaurant's orders
-        if (user.getRole() != Role.OPERATOR && restaurantId != user.getUserId())
+        if (user.getRole() != Role.OPERATOR && restaurantId.equals(user.getUserId()) )
             // ===> check if restaurant id is the same as userid TODO
             throw new IllegalArgumentException("User does not have permission to view this restaurant's orders");
         return orderRepository.findByRestaurantRestaurantId(restaurantId);
@@ -51,9 +50,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order getOrder(Long orderId, User user) {
-        // TODO Auto-generated method stub
-        // return orderRepository.findById(orderId).orElseThrow(() -> new IllegalArgumentException("Order not found"));
-        throw new UnsupportedOperationException("Unimplemented method 'getOrder'");
+        Order order = orderRepository.findById(orderId)
+            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if (order.getCustomer().getUserId().equals(user.getUserId()))
+            checkRestaurantOrOperator(order, user);
+        return order;
     }
 
     @Transactional
@@ -95,9 +96,7 @@ public class OrderServiceImpl implements OrderService {
         orderRepository.save(order);
     }
 
-    @Transactional
-    @Override
-    public void checkRestaurantOrOperator(Order order, User user) {
+    private void checkRestaurantOrOperator(Order order, User user) {
         if (user.getRole() == Role.OPERATOR)
             return;
         if (user.getRole() == Role.RESTAURANT_OWNER && 
