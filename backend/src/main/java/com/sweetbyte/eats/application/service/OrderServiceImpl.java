@@ -50,11 +50,19 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order getOrder(Long orderId, User user) {
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        Order order = findOrderById(orderId);
         if (order.getCustomer().getUserId().equals(user.getUserId()))
             checkRestaurantOrOperator(order, user);
         return order;
+    }
+
+    @Override
+    @Transactional
+    public Order rejectOrder(Long orderId, User user, String reason) {
+        Order order = findOrderById(orderId);
+        checkRestaurantOrOperator(order, user);
+        order.reject(reason);
+        return orderRepository.save(order);
     }
 
     @Transactional
@@ -81,8 +89,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void cancelOrder(Long orderId, User user) {
         // Implementation for canceling an order
-        Order order = orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        Order order = findOrderById(orderId);
         if (user.getRole() == Role.CUSTOMER) {
             if (!order.getCustomer().getUserId().equals(user.getUserId())) {
                 throw new IllegalArgumentException("User does not have permission to cancel this order");
@@ -105,5 +112,10 @@ public class OrderServiceImpl implements OrderService {
             /* idk if the restaurantId is the same as the userid =====>>>> TODO */
         else
             throw new IllegalArgumentException("User does not have permission to perform this action");
+    }
+
+    private Order findOrderById(Long orderId) {
+        return orderRepository.findById(orderId)
+            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
     }
 }

@@ -12,6 +12,7 @@ import com.sweetbyte.eats.application.model.User;
 public interface OrderService {
     Order createOrder(Order order, User user);
     Order getOrder(Long orderId, User user);
+    Order rejectOrder(Long orderId, User user, String reason);
     List<Order> getUsersOrders(User user);
     List<Order> getRestaurantOrders(Long restaurantId, User user);
     Order updateOrderStatus(Order order, OrderStatus newStatus, User user);
