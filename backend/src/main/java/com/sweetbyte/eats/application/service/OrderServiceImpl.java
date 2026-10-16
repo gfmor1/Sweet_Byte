@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.model.Order;
+import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
 @Service 
@@ -19,7 +20,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order createOrder(Order order, User user) {
-        // Implementation for creating an order
         Objects.requireNonNull(order, "Order cannot be null");
         Objects.requireNonNull(user, "User cannot be null");
 
@@ -33,16 +33,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public List<Order> getUsersOrders(User user) {
-        // Implementation for getting a user's orders
         return orderRepository.findByCustomerUserId(user.getUserId());
     }
 
     @Override
     @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
-        // Implementation for getting a restaurant's orders
-        if (user.getRole() != Role.OPERATOR && restaurantId.equals(user.getUserId()) )
-            // ===> check if restaurant id is the same as userid TODO
+        if (!isRestaurantOwner(user, restaurantId) && user.getRole() != Role.OPERATOR)
             throw new IllegalArgumentException("User does not have permission to view this restaurant's orders");
         return orderRepository.findByRestaurantRestaurantId(restaurantId);
     }
@@ -51,7 +48,9 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public Order getOrder(Long orderId, User user) {
         Order order = findOrderById(orderId);
-        if (order.getCustomer().getUserId().equals(user.getUserId()))
+        boolean assignedCourier = order.getCourier() != null 
+            && order.getCourier().getUserId().equals(user.getUserId());
+        if (order.getCustomer().getUserId().equals(user.getUserId()) || !assignedCourier)
             checkRestaurantOrOperator(order, user);
         return order;
     }
@@ -88,14 +87,12 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Override
     public void cancelOrder(Long orderId, User user) {
-        // Implementation for canceling an order
         Order order = findOrderById(orderId);
         if (user.getRole() == Role.CUSTOMER) {
             if (!order.getCustomer().getUserId().equals(user.getUserId())) {
                 throw new IllegalArgumentException("User does not have permission to cancel this order");
             }
             order.cancelByCustomer();
-        // ============>>>>>>>>>> TODO can a restaurant cancel an order?
         } else if (user.getRole() == Role.OPERATOR) {
             order.cancelByOperator();
         } else
@@ -106,10 +103,8 @@ public class OrderServiceImpl implements OrderService {
     private void checkRestaurantOrOperator(Order order, User user) {
         if (user.getRole() == Role.OPERATOR)
             return;
-        if (user.getRole() == Role.RESTAURANT_OWNER && 
-            order.getRestaurant().getRestaurantId().equals(user.getUserId()))
+        if (isRestaurantOwner(user, order.getRestaurant().getRestaurantId()))
             return;
-            /* idk if the restaurantId is the same as the userid =====>>>> TODO */
         else
             throw new IllegalArgumentException("User does not have permission to perform this action");
     }
@@ -117,5 +112,10 @@ public class OrderServiceImpl implements OrderService {
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
             .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+    }
+
+    private boolean isRestaurantOwner(User user, Long restaurantId) {
+        return user.getRole() == Role.RESTAURANT_OWNER
+            && Objects.equals(((RestaurantOwner)user).getRestaurant().getRestaurantId(), restaurantId);
     }
 }
