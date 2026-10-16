@@ -16,8 +16,8 @@ import java.util.List;
 @Transactional
 public class MenuServiceImpl implements MenuService{
 
-    private RestaurantRepository restaurantRepository;
-    private MenuItemRepository menuItemRepository;
+    private final RestaurantRepository restaurantRepository;
+    private final MenuItemRepository menuItemRepository;
 
     public MenuServiceImpl(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository){
         this.restaurantRepository = restaurantRepository;
@@ -79,7 +79,7 @@ public class MenuServiceImpl implements MenuService{
         Restaurant restaurant = loadRestaurant(restaurantID);
 
         //new items start with AVAILABLE
-        MenuItem menuItem = new MenuItem(restaurant, name.trim(), price, MenuItemStatus.AVAILABLE);
+        MenuItem menuItem = new MenuItem(restaurant, name, price, MenuItemStatus.AVAILABLE);
 
         //TODO: record the MenuItemAdded even once the EventService exists
         return menuItemRepository.save(menuItem);
