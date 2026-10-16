@@ -12,6 +12,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
@@ -44,10 +46,40 @@ public class MenuItem {
 
     public MenuItem(Restaurant restaurant, String name, Double price, MenuItemStatus status) {
         this.restaurant = restaurant;
-        this.name = name;
-        this.price = price;
+        this.name = validateName(name);
+        this.price = validatePrice(price);
         this.status = status;
     }
+
+    // ---- Validation ----
+
+    private static String validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Menu item name must not be null or blank");
+        }
+        return name.trim();
+    }
+
+    private static Double validatePrice(Double price) {
+        if (price == null) {
+            throw new IllegalArgumentException("Menu item price must not be null");
+        }
+        if (price < 0) {
+            throw new IllegalArgumentException("Menu item price must not be negative, got: " + price);
+        }
+        return price;
+    }
+
+    // re-checks before we writes to the DB,
+    // in case a field was set some other way 
+    @PrePersist
+    @PreUpdate
+    private void validate() {
+        validateName(name);
+        validatePrice(price);
+    }
+
+    // ---- Getters / setters ----
 
     public Long getItemId() {
         return itemId;
@@ -66,7 +98,7 @@ public class MenuItem {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = validateName(name);
     }
 
     public Double getPrice() {
@@ -74,7 +106,7 @@ public class MenuItem {
     }
 
     public void setPrice(Double price) {
-        this.price = price;
+        this.price = validatePrice(price);
     }
 
     public MenuItemStatus getStatus() {
