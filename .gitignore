@@ -18,6 +18,9 @@ Thumbs.db
 firebase-debug.log*
 firebase-debug.*.log*
 
+#db secrets
+backend/src/main/resources/application-local.properties
+
 # Logs
 *.log
 logs/
