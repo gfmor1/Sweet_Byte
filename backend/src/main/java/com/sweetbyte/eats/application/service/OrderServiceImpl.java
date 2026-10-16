@@ -45,7 +45,7 @@ public class OrderServiceImpl implements OrderService {
         if (user.getRole() != Role.OPERATOR && restaurantId != user.getUserId())
             // ===> check if restaurant id is the same as userid TODO
             throw new IllegalArgumentException("User does not have permission to view this restaurant's orders");
-        return orderRepository.findByRestaurantId(restaurantId);
+        return orderRepository.findByRestaurantRestaurantId(restaurantId);
     }
 
     @Override

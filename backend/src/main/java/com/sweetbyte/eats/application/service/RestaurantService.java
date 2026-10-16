@@ -27,5 +27,5 @@ public interface RestaurantService {
 
     void confirmPickup(Long restaurantID, Long orderID, String courierCode);
 
-    int getQueueSize(Long restaurantID);
+    Long getQueueSize(Long restaurantID);
 }
