@@ -11,12 +11,14 @@ public interface MenuService{
 
     List<MenuItem> getAvailableMenu(Long restaurantID);
 
+    MenuItem getMenuItemByID(Long menuItemID);
+
     //UC I - Manage Restaurant configuration
     MenuItem addMenuItem(Long restaurantID, String name, Double price);
 
     MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price);
 
-    void removeMenuItem(Long restaurantID, Long menuItemID);
+    List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID);
 
     MenuItem markSoldOut(Long restaurantID, Long menuItemID);
 
