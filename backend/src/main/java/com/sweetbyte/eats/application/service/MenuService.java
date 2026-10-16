@@ -1,9 +1,6 @@
 package com.sweetbyte.eats.application.service;
 
 import com.sweetbyte.eats.application.model.MenuItem;
-import com.sweetbyte.eats.application.model.Restaurant;
-import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
-import com.sweetbyte.eats.application.enums.OrderStatus;
 
 import java.util.List;
 
