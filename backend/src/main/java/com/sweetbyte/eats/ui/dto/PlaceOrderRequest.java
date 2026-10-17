@@ -10,6 +10,6 @@ public record PlaceOrderRequest(String restaurantId, List<Line> lines) {
     /* convert list of order lines to map of menu item id + qty */
     public Map<Long, Integer> toItemQuantities() {
         return lines.stream()
-            .collect(Collectors.toMap(Line::menuItemId, Line::quantity));
+            .collect(Collectors.toMap(Line::menuItemId, Line::quantity, Integer::sum));
     }
 }
