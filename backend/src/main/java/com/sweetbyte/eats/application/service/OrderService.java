@@ -11,7 +11,7 @@ import com.sweetbyte.eats.application.model.User;
 
 @Service 
 public interface OrderService {
-    Order createOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user);
+    Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user);
     Order getOrder(Long orderId, User user);
     Order rejectOrder(Long orderId, User user, String reason);
     List<Order> getUsersOrders(User user);

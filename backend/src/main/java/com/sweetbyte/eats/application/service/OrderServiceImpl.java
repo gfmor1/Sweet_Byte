@@ -31,7 +31,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order createOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user) {
+    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user) {
         if (itemQuantities.isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
