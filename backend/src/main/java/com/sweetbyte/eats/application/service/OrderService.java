@@ -1,6 +1,7 @@
 package com.sweetbyte.eats.application.service;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -10,7 +11,7 @@ import com.sweetbyte.eats.application.model.User;
 
 @Service 
 public interface OrderService {
-    Order createOrder(Order order, User user);
+    Order createOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user);
     Order getOrder(Long orderId, User user);
     Order rejectOrder(Long orderId, User user, String reason);
     List<Order> getUsersOrders(User user);

@@ -1,34 +1,65 @@
 package com.sweetbyte.eats.application.service;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
+import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.Order;
+import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
+import com.sweetbyte.eats.application.model.MenuItem;
+import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
+import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 @Service 
 public class OrderServiceImpl implements OrderService {
-    /* OrderRepo instance */
+
     private final OrderRepository orderRepository;
-    public OrderServiceImpl(OrderRepository orderRepository) {
-        this.orderRepository = orderRepository; /* init order repo*/
+    private final RestaurantRepository restaurantRepository;
+    private final MenuItemRepository menuItemRepository;
+    public OrderServiceImpl(OrderRepository orderRepository, 
+        RestaurantRepository restaurantRepository, 
+        MenuItemRepository menuItemRepository) {
+        this.orderRepository = orderRepository;
+        this.restaurantRepository = restaurantRepository;
+        this.menuItemRepository = menuItemRepository;
     }
 
     @Override
     @Transactional
-    public Order createOrder(Order order, User user) {
-        Objects.requireNonNull(order, "Order cannot be null");
-        Objects.requireNonNull(user, "User cannot be null");
-
-        if (order.getCustomer() == null || !order.getCustomer().getUserId().equals(user.getUserId()))
-            throw new IllegalArgumentException("Order must belong to the user");
-        if (order.getOrderId() != null)
-            throw new IllegalArgumentException("This order already exists");
+    public Order createOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user) {
+        if (itemQuantities.isEmpty())
+            throw new IllegalArgumentException("Order needs at least one item");
+        if (!user.hasRole(Role.CUSTOMER))
+            throw new IllegalArgumentException("Only a customer can place an order");
+        Customer customer = (Customer) user;
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+        Order order = new Order(customer, restaurant);
+        itemQuantities.forEach((menuItemId, quantity) -> {
+            MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new IllegalArgumentException("Menu item not found"));
+            order.addLine(menuItem, quantity);
+        });
         return orderRepository.save(order);
     }
+
+    // @Override
+    // @Transactional
+    // public Order createOrder(Order order, User user) {
+    //     Objects.requireNonNull(order, "Order cannot be null");
+    //     Objects.requireNonNull(user, "User cannot be null");
+
+    //     if (order.getCustomer() == null || !order.getCustomer().getUserId().equals(user.getUserId()))
+    //         throw new IllegalArgumentException("Order must belong to the user");
+    //     if (order.getOrderId() != null)
+    //         throw new IllegalArgumentException("This order already exists");
+    //     return orderRepository.save(order);
+    // }
 
     @Override
     @Transactional
@@ -50,7 +81,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = findOrderById(orderId);
         boolean assignedCourier = order.getCourier() != null 
             && order.getCourier().getUserId().equals(user.getUserId());
-        if (order.getCustomer().getUserId().equals(user.getUserId()) || !assignedCourier)
+        boolean isCustomer = order.getCustomer().getUserId().equals(user.getUserId());
+        if (!isCustomer && !assignedCourier)
             checkRestaurantOrOperator(order, user);
         return order;
     }
@@ -67,9 +99,6 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Override
     public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
-        Objects.requireNonNull(order, "Order cannot be null");
-        Objects.requireNonNull(user, "User cannot be null");
-        Objects.requireNonNull(newStatus, "Status cannot be null");
         if (newStatus == OrderStatus.ACCEPTED) {
             checkRestaurantOrOperator(order, user);
             order.accept();
