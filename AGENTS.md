@@ -28,8 +28,8 @@ SweetByte is a SOEN 343 (Concordia) academic project: an online dessert ordering
 
 - Frontend: Next.js (JavaScript or TypeScript)
 - Backend: Java with Spring Boot
-- Database: Firebase database (README also says PostgreSQL — unresolved, confirm with the team before choosing)
-- Auth: Firebase Authentication
+- Database: PostgreSQL
+- Auth: TBD (Firebase removed; to be decided)
 
 ## Layout
 

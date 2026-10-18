@@ -13,10 +13,6 @@ Thumbs.db
 .env.*
 !.env.example
 *serviceAccount*.json
-*firebase-adminsdk*.json
-.firebase/
-firebase-debug.log*
-firebase-debug.*.log*
 
 #db secrets
 backend/src/main/resources/application-local.properties

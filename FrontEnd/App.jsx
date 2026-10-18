@@ -2,10 +2,10 @@
 "use client";
 
 import { useState } from "react";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import RestaurantDashboard from "./pages/RestaurantDashboard";
+import Login from "./views/Login";
+import Register from "./views/Register";
+import CustomerDashboard from "./views/CustomerDashboard";
+import RestaurantDashboard from "./views/RestaurantDashboard";
 import { initialRestaurants } from "./data/restaurants";
 
 function App() {
