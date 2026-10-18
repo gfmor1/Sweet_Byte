@@ -1,0 +1,57 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*serviceAccount*.json
+*firebase-adminsdk*.json
+.firebase/
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Logs
+*.log
+logs/
+
+# Frontend (Next.js)
+node_modules/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+
+# Backend (Java / Spring Boot)
+target/
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+bin/
+HELP.md
+
+# Claude Code local settings
+.claude/settings.local.json
