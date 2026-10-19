@@ -18,8 +18,11 @@ public class MenuServiceImpl implements MenuService{
 
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
+    private final EventService eventService;
 
-    public MenuServiceImpl(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository){
+    public MenuServiceImpl(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
+                           EventService eventService){
+        this.eventService = eventService;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
     }
@@ -45,10 +48,12 @@ public class MenuServiceImpl implements MenuService{
         //Load the menuItem
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
         //change the status
+        MenuItemStatus from = menuItem.getStatus();
         menuItem.setStatus(status);
-        //TODO: record MenuItemStatusChanged Event
-
-        return menuItemRepository.save(menuItem);
+        MenuItem saved = menuItemRepository.save(menuItem);
+        //TODO: pass the acting user once the service methods receive one
+        eventService.record("MenuItem", saved.getItemId(), from, status, null, null);
+        return saved;
    }
 
     @Override
@@ -81,8 +86,9 @@ public class MenuServiceImpl implements MenuService{
         //new items start with AVAILABLE
         MenuItem menuItem = new MenuItem(restaurant, name, price, MenuItemStatus.AVAILABLE);
 
-        //TODO: record the MenuItemAdded even once the EventService exists
-        return menuItemRepository.save(menuItem);
+        MenuItem saved = menuItemRepository.save(menuItem);
+        eventService.record("MenuItem", saved.getItemId(), null, saved.getStatus(), null, null);
+        return saved;
 
     }
 

@@ -21,9 +21,12 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
+    private final EventService eventService;
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
-        MenuItemRepository menuItemRepository) {
+        MenuItemRepository menuItemRepository,
+        EventService eventService) {
+        this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
@@ -45,7 +48,9 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Menu item not found"));
             order.addLine(menuItem, quantity);
         });
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
+        return saved;
     }
 
     // @Override
@@ -92,13 +97,17 @@ public class OrderServiceImpl implements OrderService {
     public Order rejectOrder(Long orderId, User user, String reason) {
         Order order = findOrderById(orderId);
         checkRestaurantOrOperator(order, user);
+        OrderStatus from = order.getStatus();
         order.reject(reason);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, reason);
+        return saved;
     }
 
     @Transactional
     @Override
     public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+        OrderStatus from = order.getStatus();
         if (newStatus == OrderStatus.ACCEPTED) {
             checkRestaurantOrOperator(order, user);
             order.accept();
@@ -110,13 +119,16 @@ public class OrderServiceImpl implements OrderService {
             order.markReady();
         } else
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
+        return saved;
     }
 
     @Transactional
     @Override
     public void cancelOrder(Long orderId, User user) {
         Order order = findOrderById(orderId);
+        OrderStatus from = order.getStatus();
         if (user.getRole() == Role.CUSTOMER) {
             if (!order.getCustomer().getUserId().equals(user.getUserId())) {
                 throw new IllegalArgumentException("User does not have permission to cancel this order");
@@ -127,6 +139,7 @@ public class OrderServiceImpl implements OrderService {
         } else
             throw new IllegalArgumentException("User does not have permission to cancel this order");
         orderRepository.save(order);
+        eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
     }
 
     private void checkRestaurantOrOperator(Order order, User user) {
