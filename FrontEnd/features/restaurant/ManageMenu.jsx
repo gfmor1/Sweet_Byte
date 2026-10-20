@@ -28,7 +28,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
 
   function handleToggleStatus() {
     onUpdateItem(item.id, {
-      status: item.status === "available" ? "sold_out" : "available"
+      status: item.status === "AVAILABLE" ? "SOLD_OUT" : "AVAILABLE"
     });
   }
 
@@ -37,7 +37,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
       <h3>{item.name}</h3>
       <p>Price: ${item.price.toFixed(2)}</p>
       <p>
-        Status: {item.status === "available" ? "Available" : "Sold Out"}
+        Status: {formatEnum(item.status)}
       </p>
 
       <form onSubmit={handleSave}>
@@ -57,7 +57,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
       </form>
 
       <button onClick={handleToggleStatus}>
-        {item.status === "available"
+        {item.status === "AVAILABLE"
           ? "Mark Sold Out"
           : "Mark Available"}
       </button>{" "}
@@ -123,6 +123,7 @@ function AddItemForm({ onAddItem }) {
 
 function ManageMenu({
   restaurant,
+  restaurantStatuses,
   onUpdateItem,
   onAddItem,
   onRemoveItem,
@@ -132,26 +133,17 @@ function ManageMenu({
     <div>
       <h2>Manage Restaurant</h2>
 
-      <p>Restaurant status: {restaurant.status}</p>
+      <p>Restaurant status: {formatEnum(restaurant.status)}</p>
 
-      <button
-        onClick={() => onUpdateStatus("open")}
-        disabled={restaurant.status === "open"}
-      >
-        Open
-      </button>{" "}
-      <button
-        onClick={() => onUpdateStatus("paused")}
-        disabled={restaurant.status === "paused"}
-      >
-        Pause
-      </button>{" "}
-      <button
-        onClick={() => onUpdateStatus("closed")}
-        disabled={restaurant.status === "closed"}
-      >
-        Close
-      </button>
+      {restaurantStatuses.map((status) => (
+        <button
+          key={status}
+          onClick={() => onUpdateStatus(status)}
+          disabled={restaurant.status === status}
+        >
+          {formatEnum(status)}
+        </button>
+      ))}
 
       <div className="menu-list">
         <h2>Menu</h2>

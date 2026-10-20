@@ -1,98 +1,154 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IncomingOrders from "../features/restaurant/IncomingOrders";
 import OrderQueue from "../features/restaurant/OrderQueue";
 import ManageMenu from "../features/restaurant/ManageMenu";
+import {
+  addMenuItem,
+  changeRestaurantStatus,
+  getMenu,
+  getRestaurant,
+  removeMenuItem,
+  setMenuItemStatus,
+  updateMenuItem
+} from "../services/restaurantApi";
+import {
+  getRestaurantOrders,
+  rejectOrder,
+  updateOrderStatus
+} from "../services/orderApi";
+import { getEnums } from "../services/enumApi";
 
-function RestaurantDashboard({
-  restaurantId,
-  restaurants,
-  setRestaurants,
-  orders,
-  setOrders
-}) {
+const DEFAULT_REJECT_REASON = "Rejected by restaurant";
+
+function RestaurantDashboard({ restaurantId }) {
+  const [restaurant, setRestaurant] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [restaurantStatuses, setRestaurantStatuses] = useState([]);
   const [message, setMessage] = useState("");
 
-  const restaurant = restaurants.find((r) => r.id === restaurantId);
+  useEffect(() => {
+    async function loadDashboard() {
+      try {
+        const [restaurantInfo, menu, orderList, enums] = await Promise.all([
+          getRestaurant(restaurantId),
+          getMenu(restaurantId),
+          getRestaurantOrders(restaurantId),
+          getEnums()
+        ]);
+        setRestaurant({ ...restaurantInfo, menu });
+        setOrders(orderList);
+        setRestaurantStatuses(enums.restaurantStatuses);
+      } catch (error) {
+        setMessage(error.message);
+      }
+    }
+
+    loadDashboard();
+  }, [restaurantId]);
 
   if (!restaurant) {
-    return <p>Restaurant not found.</p>;
+    return <p>{message || "Loading restaurant..."}</p>;
   }
 
-  const restaurantOrders = orders.filter(
-    (order) => order.restaurantId === restaurantId
-  );
+  // Runs an API call, shows its error if it fails
+  async function run(action, successMessage) {
+    try {
+      await action();
+      setMessage(successMessage);
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
 
-  function updateOrder(orderId, changes) {
+  function replaceOrder(updatedOrder) {
     setOrders((previousOrders) =>
       previousOrders.map((order) =>
-        order.id === orderId ? { ...order, ...changes } : order
+        order.id === updatedOrder.id ? updatedOrder : order
       )
     );
   }
 
-  function updateRestaurant(changes) {
-    setRestaurants((previousRestaurants) =>
-      previousRestaurants.map((r) =>
-        r.id === restaurantId ? { ...r, ...changes } : r
+  function setMenu(menu) {
+    setRestaurant((previous) => ({ ...previous, menu }));
+  }
+
+  function replaceMenuItem(updatedItem) {
+    setRestaurant((previous) => ({
+      ...previous,
+      menu: previous.menu.map((item) =>
+        item.id === updatedItem.id ? updatedItem : item
       )
+    }));
+  }
+
+  function changeOrderStatus(orderId, status) {
+    return run(
+      async () => replaceOrder(await updateOrderStatus(orderId, status)),
+      `Order #${orderId} is ${formatEnum(status).toLowerCase()}`
     );
   }
 
   function handleAcceptOrder(orderId) {
-    updateOrder(orderId, { status: "accepted", acceptedAt: Date.now() });
-    setMessage(`Order #${orderId} accepted`);
+    return changeOrderStatus(orderId, "ACCEPTED");
   }
 
   function handleRejectOrder(orderId) {
-    updateOrder(orderId, { status: "rejected" });
-    setMessage(`Order #${orderId} rejected`);
+    return run(
+      async () => replaceOrder(await rejectOrder(orderId, DEFAULT_REJECT_REASON)),
+      `Order #${orderId} rejected`
+    );
   }
 
   function handleStartPreparing(orderId) {
-    updateOrder(orderId, { status: "preparing" });
-    setMessage(`Order #${orderId} is being prepared`);
+    return changeOrderStatus(orderId, "PREPARING");
   }
 
   function handleMarkReady(orderId) {
-    updateOrder(orderId, { status: "ready" });
-    setMessage(`Order #${orderId} is ready`);
+    return changeOrderStatus(orderId, "READY");
   }
 
+  // ManageMenu sends either { name, price } or { status }
   function handleUpdateItem(itemId, changes) {
-    updateRestaurant({
-      menu: restaurant.menu.map((item) =>
-        item.id === itemId ? { ...item, ...changes } : item
-      )
-    });
+    if (changes.status) {
+      return run(
+        async () =>
+          replaceMenuItem(await setMenuItemStatus(restaurantId, itemId, changes.status)),
+        "Item status updated"
+      );
+    }
+
+    return run(
+      async () =>
+        replaceMenuItem(
+          await updateMenuItem(restaurantId, itemId, changes.name, changes.price)
+        ),
+      `${changes.name} saved`
+    );
   }
 
   function handleAddItem(name, price) {
-    const nextId =
-      restaurant.menu.reduce((max, item) => Math.max(max, item.id), restaurantId * 100) + 1;
-
-    updateRestaurant({
-      menu: [
-        ...restaurant.menu,
-        { id: nextId, name, price, status: "available" }
-      ]
-    });
-    setMessage(`${name} added to the menu`);
+    return run(async () => {
+      const item = await addMenuItem(restaurantId, name, price);
+      setRestaurant((previous) => ({ ...previous, menu: [...previous.menu, item] }));
+    }, `${name} added to the menu`);
   }
 
   function handleRemoveItem(itemId) {
     const removed = restaurant.menu.find((item) => item.id === itemId);
 
-    updateRestaurant({
-      menu: restaurant.menu.filter((item) => item.id !== itemId)
-    });
-    setMessage(`${removed.name} removed from the menu`);
+    return run(
+      async () => setMenu(await removeMenuItem(restaurantId, itemId)),
+      `${removed.name} removed from the menu`
+    );
   }
 
   function handleUpdateStatus(status) {
-    updateRestaurant({ status });
-    setMessage(`Restaurant status set to ${status}`);
+    return run(async () => {
+      const updated = await changeRestaurantStatus(restaurantId, status);
+      setRestaurant((previous) => ({ ...previous, status: updated.status }));
+    }, `Restaurant status set to ${formatEnum(status)}`);
   }
 
   return (
@@ -103,19 +159,20 @@ function RestaurantDashboard({
       <p>{message}</p>
 
       <IncomingOrders
-        orders={restaurantOrders}
+        orders={orders}
         onAccept={handleAcceptOrder}
         onReject={handleRejectOrder}
       />
 
       <OrderQueue
-        orders={restaurantOrders}
+        orders={orders}
         onStartPreparing={handleStartPreparing}
         onMarkReady={handleMarkReady}
       />
 
       <ManageMenu
         restaurant={restaurant}
+        restaurantStatuses={restaurantStatuses}
         onUpdateItem={handleUpdateItem}
         onAddItem={handleAddItem}
         onRemoveItem={handleRemoveItem}

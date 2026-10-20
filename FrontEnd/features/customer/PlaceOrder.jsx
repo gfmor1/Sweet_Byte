@@ -7,13 +7,13 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
   const [quantities, setQuantities] = useState({});
   const [message, setMessage] = useState("");
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const selectedItems = restaurant.menu
       .filter(
         (item) =>
-          item.status === "available" &&
+          item.status === "AVAILABLE" &&
           (quantities[item.id] || 0) > 0
       )
       .map((item) => ({
@@ -26,14 +26,14 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
       return;
     }
 
-    if (restaurant.status !== "open") {
+    if (restaurant.status !== "OPEN") {
       setMessage("Restaurant is not open");
       return;
     }
 
-    onPlaceOrder(selectedItems);
-    setMessage("Order sent to dashboard (demo only)");
-    setQuantities({});
+    setMessage("");
+    const placed = await onPlaceOrder(selectedItems);
+    if (placed) setQuantities({});
   }
 
   return (
@@ -51,7 +51,7 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
               min="0"
               step="1"
               value={quantities[item.id] ?? 0}
-              disabled={item.status !== "available"}
+              disabled={item.status !== "AVAILABLE"}
               onChange={(event) =>
                 setQuantities({
                   ...quantities,
@@ -67,7 +67,7 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
 
         <button
           type="submit"
-          disabled={restaurant.status !== "open"}
+          disabled={restaurant.status !== "OPEN"}
         >
           Place Order
         </button>
