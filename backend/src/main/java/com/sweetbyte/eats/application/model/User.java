@@ -27,7 +27,8 @@ public abstract class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
-    // The Supabase Auth user id (the "sub" claim of the user's JWT).
+    // The Supabase Auth account id (the "sub" claim of the user's JWT).
+    // Every user is created in Supabase Auth first, seeded users included.
     @Column(nullable = false, unique = true, updatable = false)
     private UUID supabaseUid;
 
@@ -105,11 +106,12 @@ public abstract class User {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof User other)) return false;
-        return supabaseUid != null && supabaseUid.equals(other.supabaseUid);
+        return userId != null && userId.equals(other.userId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(supabaseUid);
+        // constant: the id is only assigned on save (same approach as Restaurant)
+        return User.class.hashCode();
     }
 }
