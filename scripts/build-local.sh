@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-(cd backend && ./mvnw -B -DskipTests package)
+(cd backend && ./mvnw -B -DskipTests clean package)
 (cd FrontEnd && npm ci && npm run build)
 
 [ "${1:-}" = "--build-only" ] && exit 0
