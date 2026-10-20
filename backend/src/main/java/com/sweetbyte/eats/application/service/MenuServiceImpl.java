@@ -5,6 +5,7 @@ import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.enums.MenuItemStatus;
 import com.sweetbyte.eats.application.model.MenuItem;
 import com.sweetbyte.eats.application.model.Restaurant;
+import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ public class MenuServiceImpl implements MenuService{
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
+    private final RestaurantAccess restaurantAccess;
 
     public MenuServiceImpl(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
-                           EventService eventService){
+                           EventService eventService, RestaurantAccess restaurantAccess){
         this.eventService = eventService;
+        this.restaurantAccess = restaurantAccess;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
     }
@@ -44,15 +47,15 @@ public class MenuServiceImpl implements MenuService{
     }
 
     //helper method to change to menu item status
-    private MenuItem changeItemStatus(Long restaurantID, Long menuItemID, MenuItemStatus status){
+    private MenuItem changeItemStatus(Long restaurantID, Long menuItemID, MenuItemStatus status, User user){
+        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
         //Load the menuItem
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
         //change the status
         MenuItemStatus from = menuItem.getStatus();
         menuItem.setStatus(status);
         MenuItem saved = menuItemRepository.save(menuItem);
-        //TODO: pass the acting user once the service methods receive one
-        eventService.record("MenuItem", saved.getItemId(), from, status, null, null);
+        eventService.record("MenuItem", saved.getItemId(), from, status, user, null);
         return saved;
    }
 
@@ -79,7 +82,8 @@ public class MenuServiceImpl implements MenuService{
     }
 
     @Override
-    public MenuItem addMenuItem(Long restaurantID, String name, Double price){
+    public MenuItem addMenuItem(Long restaurantID, String name, Double price, User user){
+        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
         //Load the restaurant where the item belongs to
         Restaurant restaurant = loadRestaurant(restaurantID);
 
@@ -87,13 +91,14 @@ public class MenuServiceImpl implements MenuService{
         MenuItem menuItem = new MenuItem(restaurant, name, price, MenuItemStatus.AVAILABLE);
 
         MenuItem saved = menuItemRepository.save(menuItem);
-        eventService.record("MenuItem", saved.getItemId(), null, saved.getStatus(), null, null);
+        eventService.record("MenuItem", saved.getItemId(), null, saved.getStatus(), user, null);
         return saved;
 
     }
 
     @Override
-    public MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price){
+    public MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price, User user){
+        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
         //Load menu item and make sure it belongs to the restaurant
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
 
@@ -111,7 +116,8 @@ public class MenuServiceImpl implements MenuService{
     }
 
     @Override
-    public List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID){
+    public List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID, User user){
+        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
         //Load menu item and make sure it belongs to the restaurant
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
 
@@ -133,15 +139,15 @@ public class MenuServiceImpl implements MenuService{
     }
 
     @Override
-    public MenuItem markSoldOut(Long restaurantID, Long menuItemID){
+    public MenuItem markSoldOut(Long restaurantID, Long menuItemID, User user){
         //change the status to SOLD_OUT with helper and return the updated item
-        return changeItemStatus(restaurantID, menuItemID, MenuItemStatus.SOLD_OUT);
+        return changeItemStatus(restaurantID, menuItemID, MenuItemStatus.SOLD_OUT, user);
     }
 
     @Override
-    public MenuItem markAvailable(Long restaurantID, Long menuItemID){
+    public MenuItem markAvailable(Long restaurantID, Long menuItemID, User user){
         //change the status to AVAILABLE with helper and return the updated item
-        return changeItemStatus(restaurantID, menuItemID, MenuItemStatus.AVAILABLE);
+        return changeItemStatus(restaurantID, menuItemID, MenuItemStatus.AVAILABLE, user);
     }
 
 

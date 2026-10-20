@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.service;
 
+import com.sweetbyte.eats.application.model.User;
+
 import com.sweetbyte.eats.application.enums.RestaurantStatus;
 import com.sweetbyte.eats.application.model.PreparationQueue;
 import com.sweetbyte.eats.application.model.Restaurant;
@@ -16,22 +18,21 @@ public interface RestaurantService {
     Restaurant getRestaurantByID(Long restaurantID);
 
     //UC VII - Rush
-    Restaurant pauseRestaurant(Long restaurantID);
+    Restaurant pauseRestaurant(Long restaurantID, User user);
 
-    Restaurant reOpenRestaurant(Long restaurantID);
+    Restaurant reOpenRestaurant(Long restaurantID, User user);
 
     //UC I - Manage Restaurant Configuration
-    Restaurant changeStatus(Long restaurantID, RestaurantStatus status);
+    Restaurant changeStatus(Long restaurantID, RestaurantStatus status, User user);
 
     //UC IV - Coordinate Order
-    PreparationQueue getPreparationQueue(Long restaurantID);
+    PreparationQueue getPreparationQueue(Long restaurantID, User user);
 
-    void acceptOrder(Long restaurantID, Long orderID);
 
-    void declineOrder(Long restaurantID, Long orderID, String reason);
+    // accept / decline live in OrderService (PATCH /api/orders/{id}/status, POST /api/orders/{id}/reject)
 
     void confirmPickup(Long restaurantID, Long orderID, String courierCode);
 
     //UC VII - Rush
-    Long getQueueSize(Long restaurantID);
+    Long getQueueSize(Long restaurantID, User user);
 }
