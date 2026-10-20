@@ -1,14 +1,33 @@
 
 import { useState } from "react";
+import {
+  registerCustomer,
+  registerRestaurantOwner,
+  signUp
+} from "../services/authApi";
+import { formatEnum } from "../services/enumApi";
 
-function Register() {
+// Roles that can self-register, each with its backend register call
+// TODO: COURIER once the backend has /api/auth/register/courier (operators are seeded only)
+const REGISTER_BY_ROLE = {
+  CUSTOMER: (form) =>
+    registerCustomer({ name: form.name, deliveryAddress: form.deliveryAddress }),
+  RESTAURANT_OWNER: (form) =>
+    registerRestaurantOwner({ name: form.name, restaurantName: form.restaurantName })
+};
+
+function Register({ onRegisterSuccess }) {
+  const [role, setRole] = useState("CUSTOMER");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [restaurantName, setRestaurantName] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleRegister(event) {
+  async function handleRegister(event) {
     event.preventDefault();
 
     if (password !== confirmPassword) {
@@ -16,7 +35,18 @@ function Register() {
       return;
     }
 
-    setMessage("Registration form works!");
+    setSubmitting(true);
+    setMessage("");
+    try {
+      // 1. Supabase account (gives the JWT), 2. SweetByte account for the chosen role
+      await signUp(email, password);
+      const profile = await REGISTER_BY_ROLE[role]({ name, deliveryAddress, restaurantName });
+      onRegisterSuccess(profile);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -25,6 +55,14 @@ function Register() {
       <h2>Create Account</h2>
 
       <form onSubmit={handleRegister}>
+        <select value={role} onChange={(event) => setRole(event.target.value)}>
+          {Object.keys(REGISTER_BY_ROLE).map((value) => (
+            <option key={value} value={value}>
+              {formatEnum(value)}
+            </option>
+          ))}
+        </select>
+
         <input
           type="text"
           placeholder="Full Name"
@@ -57,7 +95,29 @@ function Register() {
           required
         />
 
-        <button type="submit">Register</button>
+        {role === "CUSTOMER" && (
+          <input
+            type="text"
+            placeholder="Delivery Address"
+            value={deliveryAddress}
+            onChange={(event) => setDeliveryAddress(event.target.value)}
+            required
+          />
+        )}
+
+        {role === "RESTAURANT_OWNER" && (
+          <input
+            type="text"
+            placeholder="Restaurant Name"
+            value={restaurantName}
+            onChange={(event) => setRestaurantName(event.target.value)}
+            required
+          />
+        )}
+
+        <button type="submit" disabled={submitting}>
+          {submitting ? "Creating account..." : "Register"}
+        </button>
       </form>
 
       <p>{message}</p>

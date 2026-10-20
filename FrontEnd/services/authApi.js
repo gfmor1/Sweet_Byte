@@ -11,8 +11,13 @@ function throwIfError(error) {
 }
 
 // Step 1 of registration: create the Supabase account (session = logged in right away)
+// If a previous attempt created the Supabase account but step 2 failed, sign in instead
+// so the user can retry without a "User already registered" dead end.
 export async function signUp(email, password) {
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  let { data, error } = await supabase.auth.signUp({ email, password });
+  if (error && /already registered/i.test(error.message)) {
+    ({ data, error } = await supabase.auth.signInWithPassword({ email, password }));
+  }
   throwIfError(error);
   // "Confirm email" enabled in Supabase: no session until the user clicks the email link
   if (!data.session) {

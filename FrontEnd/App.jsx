@@ -52,7 +52,7 @@ function App() {
         {page === "login" ? (
           <Login onLoginSuccess={handleLoginSuccess} />
         ) : (
-          <Register />
+          <Register onRegisterSuccess={handleLoginSuccess} />
         )}
       </div>
     </div>
