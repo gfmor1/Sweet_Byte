@@ -1,9 +1,15 @@
+import { supabase } from "./supabaseClient";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
 export async function apiRequest(path, { method = "GET", body } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  // TODO (step 2): send the Supabase session token as Authorization: Bearer <jwt>
+
+  // Logged in: send the Supabase JWT so the backend knows who is acting.
+  // getSession() returns the stored session and refreshes the token if it expired.
+  const { data } = await supabase.auth.getSession();
+  if (data.session) headers["Authorization"] = `Bearer ${data.session.access_token}`;
 
   const response = await fetch(`${API_URL}${path}`, {
     method,
