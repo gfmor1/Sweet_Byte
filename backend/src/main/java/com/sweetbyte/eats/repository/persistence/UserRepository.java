@@ -1,13 +1,10 @@
 package com.sweetbyte.eats.repository.persistence;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import com.sweetbyte.eats.application.enums.Role;
 
 import com.sweetbyte.eats.application.model.User;
 
@@ -21,5 +18,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select count(o) > 0 from RestaurantOwner o where o.restaurant.restaurantId = :restaurantId")
     boolean existsOwnerForRestaurant(@Param("restaurantId") Long restaurantId);
 
-    List<User> findByRole(Role role);
 }
