@@ -13,4 +13,7 @@ public interface MenuItemRepository extends JpaRepository<MenuItem, Long> {
 
     List<MenuItem> findByRestaurantRestaurantIdAndStatus(Long restaurantID, MenuItemStatus status);
 
+    // seeder duplicate check: is this item (by name) already on this restaurant's menu?
+    boolean existsByRestaurantRestaurantIdAndName(Long restaurantID, String name);
+
 }
