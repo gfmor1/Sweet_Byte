@@ -1,9 +1,55 @@
-// Login / logout through Supabase Auth.
-// TODO (step 2): implement with supabase-js (signInWithPassword / signOut),
-// then load the SweetByte profile from GET /api/auth/me.
+import { apiRequest } from "./apiClient";
+import { supabase } from "./supabaseClient";
 
-export async function login(email, password) {
-  throw new Error("Login is not implemented yet");
+// Auth = Supabase account (email + password, gives the JWT)
+//      + SweetByte account (our users row: role, restaurant…), created by /api/auth/register/*.
+// Profiles returned below have the GET /api/auth/me shape: { userId, name, email, role, ... }
+
+// Supabase returns { data, error } instead of throwing
+function throwIfError(error) {
+  if (error) throw new Error(error.message);
 }
 
-export async function logout() {}
+// Step 1 of registration: create the Supabase account (session = logged in right away)
+export async function signUp(email, password) {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  throwIfError(error);
+  // "Confirm email" enabled in Supabase: no session until the user clicks the email link
+  if (!data.session) {
+    throw new Error("Check your email to confirm your account, then log in");
+  }
+}
+
+// Step 2 of registration: create the SweetByte account for the signed-up user
+export function registerCustomer({ name, deliveryAddress }) {
+  return apiRequest("/api/auth/register/customer", {
+    method: "POST",
+    body: { name, deliveryAddress }
+  });
+}
+
+export function registerRestaurantOwner({ name, restaurantName }) {
+  return apiRequest("/api/auth/register/restaurant-owner", {
+    method: "POST",
+    body: { name, restaurantName }
+  });
+}
+
+// TODO: registerCourier (backend endpoint not built yet)
+
+// Returning user: Supabase checks the password, then we load the SweetByte profile
+export async function login(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  throwIfError(error);
+  return getMe();
+}
+
+// The logged-in user's SweetByte profile (403 = Supabase account without a SweetByte account)
+export function getMe() {
+  return apiRequest("/api/auth/me");
+}
+
+export async function logout() {
+  const { error } = await supabase.auth.signOut();
+  throwIfError(error);
+}
