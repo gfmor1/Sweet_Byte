@@ -22,7 +22,9 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()   // CORS preflight
-                .requestMatchers("/api/orders/**").authenticated()
+                // need a valid token: these endpoints act as the logged-in user (they read the JWT's sub),
+                // so without .authenticated() an anonymous request would reach them with no user
+                .requestMatchers("/api/orders/**", "/api/auth/**").authenticated()
                 // TODO: restaurant/menu write endpoints still have no checks
                 .anyRequest().permitAll())
             .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()));

@@ -31,7 +31,8 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
-    @ExceptionHandler({IllegalAccessError.class, HttpMessageNotReadableException.class})
+    // bad input: failed validation (IllegalArgumentException) or unreadable JSON body
+    @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, Object>> badRequest(Exception e) {
         return error(HttpStatus.BAD_REQUEST, e.getMessage());
     }
