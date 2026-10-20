@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.service;
 
+import com.sweetbyte.eats.application.model.User;
+
 import com.sweetbyte.eats.application.model.MenuItem;
 
 import java.util.List;
@@ -14,14 +16,14 @@ public interface MenuService{
     MenuItem getMenuItemByID(Long menuItemID);
 
     //UC I - Manage Restaurant configuration
-    MenuItem addMenuItem(Long restaurantID, String name, Double price);
+    MenuItem addMenuItem(Long restaurantID, String name, Double price, User user);
 
-    MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price);
+    MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price, User user);
 
-    List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID);
+    List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID, User user);
 
-    MenuItem markSoldOut(Long restaurantID, Long menuItemID);
+    MenuItem markSoldOut(Long restaurantID, Long menuItemID, User user);
 
-    MenuItem markAvailable(Long restaurantID, Long menuItemID);
+    MenuItem markAvailable(Long restaurantID, Long menuItemID, User user);
 
 }

@@ -1,4 +1,6 @@
-const QUEUE_STATUSES = ["accepted", "preparing", "ready"];
+import { formatEnum } from "../../services/enumApi";
+
+const QUEUE_STATUSES = ["ACCEPTED", "PREPARING", "READY"];
 
 function OrderQueue({ orders, onStartPreparing, onMarkReady }) {
   // FIFO: oldest accepted order first
@@ -7,7 +9,7 @@ function OrderQueue({ orders, onStartPreparing, onMarkReady }) {
     .sort((a, b) => a.acceptedAt - b.acceptedAt);
 
   // Only the oldest order still waiting may start preparing
-  const nextOrder = queue.find((order) => order.status === "accepted");
+  const nextOrder = queue.find((order) => order.status === "ACCEPTED");
 
   return (
     <div>
@@ -20,7 +22,7 @@ function OrderQueue({ orders, onStartPreparing, onMarkReady }) {
           <h3>
             #{index + 1} in queue: Order #{order.id}
           </h3>
-          <p>Status: {order.status}</p>
+          <p>Status: {formatEnum(order.status)}</p>
 
           {order.items.map((item) => (
             <p key={item.id}>
@@ -28,7 +30,7 @@ function OrderQueue({ orders, onStartPreparing, onMarkReady }) {
             </p>
           ))}
 
-          {order.status === "accepted" && (
+          {order.status === "ACCEPTED" && (
             <button
               onClick={() => onStartPreparing(order.id)}
               disabled={order !== nextOrder}
@@ -37,7 +39,7 @@ function OrderQueue({ orders, onStartPreparing, onMarkReady }) {
             </button>
           )}
 
-          {order.status === "preparing" && (
+          {order.status === "PREPARING" && (
             <button onClick={() => onMarkReady(order.id)}>
               Mark Ready
             </button>

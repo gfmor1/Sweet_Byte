@@ -11,8 +11,8 @@
 - **Frontend Framework** - Next.js
 - **Backend Language** - Java
 - **Backend Framework** - Spring boot
-- **Database** - Firebase database (PostgreSQL)
-- **Authentication** - Firebase Authentication
+- **Database** - PostgreSQL
+- **Authentication** - TBD
 
 
 ## Authors 

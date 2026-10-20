@@ -1,3 +1,5 @@
+import { formatEnum } from "../../services/enumApi";
+
 function MenuList({ items }) {
   return (
     <div>
@@ -9,9 +11,7 @@ function MenuList({ items }) {
           <p>Price: ${item.price.toFixed(2)}</p>
 
           <p>
-            Status: {item.status === "available"
-              ? "Available"
-              : "Sold Out"}
+            Status: {formatEnum(item.status)}
           </p>
         </div>
       ))}

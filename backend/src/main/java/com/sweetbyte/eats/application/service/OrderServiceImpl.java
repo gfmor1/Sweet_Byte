@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
+import com.sweetbyte.eats.application.exceptions.NotFoundException;
+import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
@@ -21,9 +23,12 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
+    private final EventService eventService;
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
-        MenuItemRepository menuItemRepository) {
+        MenuItemRepository menuItemRepository,
+        EventService eventService) {
+        this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
@@ -35,17 +40,19 @@ public class OrderServiceImpl implements OrderService {
         if (itemQuantities.isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
-            throw new IllegalArgumentException("Only a customer can place an order");
+            throw new PermissionDeniedException("Only a customer can place an order");
         Customer customer = (Customer) user;
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new IllegalArgumentException("Restaurant not found"));
+            .orElseThrow(() -> new NotFoundException("Restaurant", restaurantId));
         Order order = new Order(customer, restaurant);
         itemQuantities.forEach((menuItemId, quantity) -> {
             MenuItem menuItem = menuItemRepository.findById(menuItemId)
-                .orElseThrow(() -> new IllegalArgumentException("Menu item not found"));
+                .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
             order.addLine(menuItem, quantity);
         });
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
+        return saved;
     }
 
     // @Override
@@ -71,7 +78,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
         if (!isRestaurantOwner(user, restaurantId) && user.getRole() != Role.OPERATOR)
-            throw new IllegalArgumentException("User does not have permission to view this restaurant's orders");
+            throw new PermissionDeniedException("User does not have permission to view this restaurant's orders");
         return orderRepository.findByRestaurantRestaurantId(restaurantId);
     }
 
@@ -92,13 +99,17 @@ public class OrderServiceImpl implements OrderService {
     public Order rejectOrder(Long orderId, User user, String reason) {
         Order order = findOrderById(orderId);
         checkRestaurantOrOperator(order, user);
+        OrderStatus from = order.getStatus();
         order.reject(reason);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, reason);
+        return saved;
     }
 
     @Transactional
     @Override
     public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+        OrderStatus from = order.getStatus();
         if (newStatus == OrderStatus.ACCEPTED) {
             checkRestaurantOrOperator(order, user);
             order.accept();
@@ -110,23 +121,27 @@ public class OrderServiceImpl implements OrderService {
             order.markReady();
         } else
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
+        return saved;
     }
 
     @Transactional
     @Override
     public void cancelOrder(Long orderId, User user) {
         Order order = findOrderById(orderId);
+        OrderStatus from = order.getStatus();
         if (user.getRole() == Role.CUSTOMER) {
             if (!order.getCustomer().getUserId().equals(user.getUserId())) {
-                throw new IllegalArgumentException("User does not have permission to cancel this order");
+                throw new PermissionDeniedException("User does not have permission to cancel this order");
             }
             order.cancelByCustomer();
         } else if (user.getRole() == Role.OPERATOR) {
             order.cancelByOperator();
         } else
-            throw new IllegalArgumentException("User does not have permission to cancel this order");
+            throw new PermissionDeniedException("User does not have permission to cancel this order");
         orderRepository.save(order);
+        eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
     }
 
     private void checkRestaurantOrOperator(Order order, User user) {
@@ -135,12 +150,12 @@ public class OrderServiceImpl implements OrderService {
         if (isRestaurantOwner(user, order.getRestaurant().getRestaurantId()))
             return;
         else
-            throw new IllegalArgumentException("User does not have permission to perform this action");
+            throw new PermissionDeniedException("User does not have permission to perform this action");
     }
 
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
-            .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+            .orElseThrow(() -> new NotFoundException("Order", orderId));
     }
 
     private boolean isRestaurantOwner(User user, Long restaurantId) {

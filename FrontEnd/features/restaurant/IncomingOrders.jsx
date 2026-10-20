@@ -1,5 +1,7 @@
+import { formatEnum } from "../../services/enumApi";
+
 function IncomingOrders({ orders, onAccept, onReject }) {
-  const incoming = orders.filter((order) => order.status === "placed");
+  const incoming = orders.filter((order) => order.status === "PLACED");
 
   return (
     <div>
@@ -10,7 +12,7 @@ function IncomingOrders({ orders, onAccept, onReject }) {
       {incoming.map((order) => (
         <div key={order.id} className="order-card">
           <h3>Order #{order.id}</h3>
-          <p>Status: {order.status}</p>
+          <p>Status: {formatEnum(order.status)}</p>
 
           {order.items.map((item) => (
             <p key={item.id}>

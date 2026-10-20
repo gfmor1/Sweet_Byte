@@ -2,10 +2,16 @@ package com.sweetbyte.eats.ui.controller;
 
 import com.sweetbyte.eats.application.service.RestaurantService;
 import com.sweetbyte.eats.ui.dto.*;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+import com.sweetbyte.eats.application.model.User;
+import com.sweetbyte.eats.application.service.AuthService;
 //list and view restaurants, pause and reopen, view the preparation queue
 
 @RestController
@@ -13,9 +19,11 @@ import java.util.List;
 public class RestaurantController {
 
     private final RestaurantService restaurantService;
+    private final AuthService authService;
 
-    public RestaurantController(RestaurantService restaurantService){
+    public RestaurantController(RestaurantService restaurantService, AuthService authService){
         this.restaurantService = restaurantService;
+        this.authService = authService;
     }
 
     //UC II steps 3-4
@@ -32,47 +40,38 @@ public class RestaurantController {
 
     //UC VII step 37
     @PatchMapping("/{restaurantId}/pause")
-    public RestaurantResponse pause(@PathVariable Long restaurantId) {
-        return RestaurantResponse.from(restaurantService.pauseRestaurant(restaurantId));
+    public RestaurantResponse pause(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId) {
+        return RestaurantResponse.from(restaurantService.pauseRestaurant(restaurantId, currentUser(jwt)));
     }
 
     @PatchMapping("/{restaurantId}/reopen")
-    public RestaurantResponse reopen(@PathVariable Long restaurantId) {
-        return RestaurantResponse.from(restaurantService.reOpenRestaurant(restaurantId));
+    public RestaurantResponse reopen(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId) {
+        return RestaurantResponse.from(restaurantService.reOpenRestaurant(restaurantId, currentUser(jwt)));
     }
 
     //UC I step 2
     @PatchMapping("/{restaurantId}/status")
-    public RestaurantResponse changeStatus(@PathVariable Long restaurantId,
+    public RestaurantResponse changeStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId,
                                            @RequestBody ChangeStatusRequest body) {
-        return RestaurantResponse.from(restaurantService.changeStatus(restaurantId, body.status()));
+        return RestaurantResponse.from(restaurantService.changeStatus(restaurantId, body.status(), currentUser(jwt)));
     }
 
     //UC IV step 14
     @GetMapping("/{restaurantId}/queue")
-    public QueueResponse getQueue(@PathVariable Long restaurantId) {
-        return QueueResponse.from(restaurantService.getPreparationQueue(restaurantId));
+    public QueueResponse getQueue(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId) {
+        return QueueResponse.from(restaurantService.getPreparationQueue(restaurantId, currentUser(jwt)));
     }
 
     //UC VII
     @GetMapping("/{restaurantId}/queue/size")
-    public Long getQueueSize(@PathVariable Long restaurantId) {
-        return restaurantService.getQueueSize(restaurantId);
+    public Long getQueueSize(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId) {
+        return restaurantService.getQueueSize(restaurantId, currentUser(jwt));
     }
 
-    //UC IV step 12
-    @PostMapping("/{restaurantId}/orders/{orderId}/accept")
-    public ResponseEntity<Void> acceptOrder(@PathVariable Long restaurantId, @PathVariable Long orderId) {
-        restaurantService.acceptOrder(restaurantId, orderId);
-        return ResponseEntity.noContent().build();
-    }
+    // accept / decline: see OrderController (PATCH /api/orders/{id}/status, POST /api/orders/{id}/reject)
 
-    //UC IV step 12 / UC V step 32
-    @PostMapping("/{restaurantId}/orders/{orderId}/decline")
-    public ResponseEntity<Void> declineOrder(@PathVariable Long restaurantId, @PathVariable Long orderId,
-                                             @RequestBody DeclineOrderRequest body) {
-        restaurantService.declineOrder(restaurantId, orderId, body.reason());
-        return ResponseEntity.noContent().build();
+    // the verified JWT's sub (Supabase id) -> our User
+    private User currentUser(Jwt jwt) {
+        return authService.currentUser(UUID.fromString(jwt.getSubject()));
     }
-    
 }

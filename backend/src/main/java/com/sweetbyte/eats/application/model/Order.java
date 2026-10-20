@@ -51,8 +51,9 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status;
 
-    @Generated                                     // the database fills it on insert
-    @Column(nullable = false, insertable = false, updatable = false)
+    // the database fills it on insert (bigserial = auto-incrementing sequence), used for FIFO order
+    @Generated
+    @Column(nullable = false, insertable = false, updatable = false, columnDefinition = "bigserial")
     private Long arrivalSeq;
 
     @Column(nullable = false, updatable = false)

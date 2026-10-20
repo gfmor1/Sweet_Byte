@@ -2,18 +2,19 @@
 "use client";
 
 import { useState } from "react";
+import { StatusMessage, useStatus } from "../../components/StatusMessage";
 
 function PlaceOrder({ restaurant, onPlaceOrder }) {
   const [quantities, setQuantities] = useState({});
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const selectedItems = restaurant.menu
       .filter(
         (item) =>
-          item.status === "available" &&
+          item.status === "AVAILABLE" &&
           (quantities[item.id] || 0) > 0
       )
       .map((item) => ({
@@ -22,18 +23,18 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
       }));
 
     if (selectedItems.length === 0) {
-      setMessage("Please select at least one item");
+      show.error("Please select at least one item");
       return;
     }
 
-    if (restaurant.status !== "open") {
-      setMessage("Restaurant is not open");
+    if (restaurant.status !== "OPEN") {
+      show.error("Restaurant is not open");
       return;
     }
 
-    onPlaceOrder(selectedItems);
-    setMessage("Order sent to dashboard (demo only)");
-    setQuantities({});
+    show.clear();
+    const placed = await onPlaceOrder(selectedItems);
+    if (placed) setQuantities({});
   }
 
   return (
@@ -51,7 +52,7 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
               min="0"
               step="1"
               value={quantities[item.id] ?? 0}
-              disabled={item.status !== "available"}
+              disabled={item.status !== "AVAILABLE"}
               onChange={(event) =>
                 setQuantities({
                   ...quantities,
@@ -67,13 +68,13 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
 
         <button
           type="submit"
-          disabled={restaurant.status !== "open"}
+          disabled={restaurant.status !== "OPEN"}
         >
           Place Order
         </button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }

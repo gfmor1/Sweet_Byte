@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { StatusMessage, useStatus } from "../../components/StatusMessage";
 
 function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(String(item.price));
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   function handleSave(event) {
     event.preventDefault();
@@ -13,22 +14,22 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
     const parsedPrice = Number(price);
 
     if (name.trim() === "") {
-      setMessage("Name cannot be empty");
+      show.error("Name cannot be empty");
       return;
     }
 
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setMessage("Price must be greater than 0");
+      show.error("Price must be greater than 0");
       return;
     }
 
     onUpdateItem(item.id, { name: name.trim(), price: parsedPrice });
-    setMessage("Saved");
+    show.success("Saved");
   }
 
   function handleToggleStatus() {
     onUpdateItem(item.id, {
-      status: item.status === "available" ? "sold_out" : "available"
+      status: item.status === "AVAILABLE" ? "SOLD_OUT" : "AVAILABLE"
     });
   }
 
@@ -37,7 +38,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
       <h3>{item.name}</h3>
       <p>Price: ${item.price.toFixed(2)}</p>
       <p>
-        Status: {item.status === "available" ? "Available" : "Sold Out"}
+        Status: {formatEnum(item.status)}
       </p>
 
       <form onSubmit={handleSave}>
@@ -57,13 +58,13 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
       </form>
 
       <button onClick={handleToggleStatus}>
-        {item.status === "available"
+        {item.status === "AVAILABLE"
           ? "Mark Sold Out"
           : "Mark Available"}
       </button>{" "}
       <button onClick={() => onRemoveItem(item.id)}>Remove</button>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }
@@ -71,7 +72,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
 function AddItemForm({ onAddItem }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -79,19 +80,19 @@ function AddItemForm({ onAddItem }) {
     const parsedPrice = Number(price);
 
     if (name.trim() === "") {
-      setMessage("Name cannot be empty");
+      show.error("Name cannot be empty");
       return;
     }
 
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setMessage("Price must be greater than 0");
+      show.error("Price must be greater than 0");
       return;
     }
 
     onAddItem(name.trim(), parsedPrice);
     setName("");
     setPrice("");
-    setMessage("");
+    show.clear();
   }
 
   return (
@@ -116,13 +117,14 @@ function AddItemForm({ onAddItem }) {
         <button type="submit">Add Item</button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }
 
 function ManageMenu({
   restaurant,
+  restaurantStatuses,
   onUpdateItem,
   onAddItem,
   onRemoveItem,
@@ -132,26 +134,17 @@ function ManageMenu({
     <div>
       <h2>Manage Restaurant</h2>
 
-      <p>Restaurant status: {restaurant.status}</p>
+      <p>Restaurant status: {formatEnum(restaurant.status)}</p>
 
-      <button
-        onClick={() => onUpdateStatus("open")}
-        disabled={restaurant.status === "open"}
-      >
-        Open
-      </button>{" "}
-      <button
-        onClick={() => onUpdateStatus("paused")}
-        disabled={restaurant.status === "paused"}
-      >
-        Pause
-      </button>{" "}
-      <button
-        onClick={() => onUpdateStatus("closed")}
-        disabled={restaurant.status === "closed"}
-      >
-        Close
-      </button>
+      {restaurantStatuses.map((status) => (
+        <button
+          key={status}
+          onClick={() => onUpdateStatus(status)}
+          disabled={restaurant.status === status}
+        >
+          {formatEnum(status)}
+        </button>
+      ))}
 
       <div className="menu-list">
         <h2>Menu</h2>
