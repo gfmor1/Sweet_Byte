@@ -54,6 +54,21 @@ export function getMe() {
   return apiRequest("/api/auth/me");
 }
 
+// Page load / reload: Supabase keeps the session in the browser; null = not logged in
+export async function getCurrentUser() {
+  const { data } = await supabase.auth.getSession();
+  return data.session ? getMe() : null;
+}
+
+// Session ended outside our logout button (other tab, expired refresh token).
+// Returns an unsubscribe function.
+export function onSignedOut(callback) {
+  const { data } = supabase.auth.onAuthStateChange((event) => {
+    if (event === "SIGNED_OUT") callback();
+  });
+  return () => data.subscription.unsubscribe();
+}
+
 export async function logout() {
   const { error } = await supabase.auth.signOut();
   throwIfError(error);

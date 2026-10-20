@@ -1,16 +1,32 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Login from "./views/Login";
 import Register from "./views/Register";
 import CustomerDashboard from "./views/CustomerDashboard";
 import RestaurantDashboard from "./views/RestaurantDashboard";
-import { logout } from "./services/authApi";
+import { getCurrentUser, logout, onSignedOut } from "./services/authApi";
 
 function App() {
   const [page, setPage] = useState("login");
   const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionMessage, setSessionMessage] = useState("");
+
+  // Restore the logged-in user after a reload, and react to sign-outs from elsewhere
+  useEffect(() => {
+    getCurrentUser()
+      .then((currentUser) => setUser(currentUser))
+      // e.g. Supabase session without a SweetByte account (403 "register first")
+      .catch((error) => setSessionMessage(error.message))
+      .finally(() => setCheckingSession(false));
+
+    return onSignedOut(() => {
+      setUser(null);
+      setPage("login");
+    });
+  }, []);
 
   function handleLoginSuccess(loggedInUser) {
     setUser(loggedInUser);
@@ -20,6 +36,10 @@ function App() {
     await logout();
     setUser(null);
     setPage("login");
+  }
+
+  if (checkingSession) {
+    return <p>Loading...</p>;
   }
 
   if (user !== null) {
@@ -47,6 +67,8 @@ function App() {
       <button onClick={() => setPage("register")}>
         Register
       </button>
+
+      <p>{sessionMessage}</p>
 
       <div className="auth-page">
         {page === "login" ? (
