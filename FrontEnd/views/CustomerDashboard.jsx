@@ -7,12 +7,13 @@ import PlaceOrder from "../features/customer/PlaceOrder";
 import { getMenu, getRestaurants } from "../services/restaurantApi";
 import { cancelOrder, getMyOrders, placeOrder } from "../services/orderApi";
 import { formatEnum } from "../services/enumApi";
+import { StatusMessage, useStatus } from "../components/StatusMessage";
 
 function CustomerDashboard() {
   const [restaurants, setRestaurants] = useState([]);
   const [orders, setOrders] = useState([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   async function loadDashboard() {
     try {
@@ -23,7 +24,7 @@ function CustomerDashboard() {
       setRestaurants(restaurantList);
       setOrders(orderList);
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     }
   }
 
@@ -32,12 +33,12 @@ function CustomerDashboard() {
   }, []);
 
   async function handleSelectRestaurant(restaurant) {
-    setMessage("");
+    show.clear();
     try {
       const menu = await getMenu(restaurant.id);
       setSelectedRestaurant({ ...restaurant, menu });
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     }
   }
 
@@ -45,10 +46,10 @@ function CustomerDashboard() {
     try {
       const order = await placeOrder(selectedRestaurant.id, selectedItems);
       setOrders((previousOrders) => [...previousOrders, order]);
-      setMessage(`Order #${order.id} placed successfully!`);
+      show.success(`Order #${order.id} placed successfully!`);
       return true;
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
       return false;
     }
   }
@@ -61,9 +62,9 @@ function CustomerDashboard() {
           order.id === orderId ? { ...order, status: "CANCELLED" } : order
         )
       );
-      setMessage(`Order #${orderId} cancelled`);
+      show.success(`Order #${orderId} cancelled`);
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     }
   }
 
@@ -76,7 +77,7 @@ return (
 
         <button
           onClick={() => {
-            setMessage("");
+            show.clear();
             setSelectedRestaurant(null);
           }}
         >
@@ -91,7 +92,7 @@ return (
   onPlaceOrder={handlePlaceOrder}
 />
 
-        <p>{message}</p>
+        <StatusMessage status={status} />
       </div>
     ) : (
       <>
@@ -131,7 +132,7 @@ return (
           </div>
         ))}
 
-        <p>{message}</p>
+        <StatusMessage status={status} />
       </>
     )}
   </div>

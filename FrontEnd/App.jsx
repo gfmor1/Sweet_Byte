@@ -7,6 +7,7 @@ import Register from "./views/Register";
 import CustomerDashboard from "./views/CustomerDashboard";
 import RestaurantDashboard from "./views/RestaurantDashboard";
 import { getCurrentUser, logout, onSignedOut } from "./services/authApi";
+import LoadingBar from "./components/LoadingBar";
 
 function App() {
   const [page, setPage] = useState("login");
@@ -39,12 +40,18 @@ function App() {
   }
 
   if (checkingSession) {
-    return <p>Loading...</p>;
+    return (
+      <>
+        <LoadingBar />
+        <p>Loading...</p>
+      </>
+    );
   }
 
   if (user !== null) {
     return (
       <div className="app-shell">
+        <LoadingBar />
         <button onClick={handleLogout}>Logout</button>
 
         {user.role === "CUSTOMER" ? (
@@ -60,6 +67,7 @@ function App() {
 
   return (
     <div className="app-shell">
+      <LoadingBar />
       <button onClick={() => setPage("login")}>
         Login
       </button>
@@ -68,7 +76,7 @@ function App() {
         Register
       </button>
 
-      <p>{sessionMessage}</p>
+      {sessionMessage && <p className="error-message">{sessionMessage}</p>}
 
       <div className="auth-page">
         {page === "login" ? (

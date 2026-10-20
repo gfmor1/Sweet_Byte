@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { StatusMessage, useStatus } from "../../components/StatusMessage";
 
 function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
   const [name, setName] = useState(item.name);
   const [price, setPrice] = useState(String(item.price));
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   function handleSave(event) {
     event.preventDefault();
@@ -13,17 +14,17 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
     const parsedPrice = Number(price);
 
     if (name.trim() === "") {
-      setMessage("Name cannot be empty");
+      show.error("Name cannot be empty");
       return;
     }
 
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setMessage("Price must be greater than 0");
+      show.error("Price must be greater than 0");
       return;
     }
 
     onUpdateItem(item.id, { name: name.trim(), price: parsedPrice });
-    setMessage("Saved");
+    show.success("Saved");
   }
 
   function handleToggleStatus() {
@@ -63,7 +64,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
       </button>{" "}
       <button onClick={() => onRemoveItem(item.id)}>Remove</button>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }
@@ -71,7 +72,7 @@ function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
 function AddItemForm({ onAddItem }) {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -79,19 +80,19 @@ function AddItemForm({ onAddItem }) {
     const parsedPrice = Number(price);
 
     if (name.trim() === "") {
-      setMessage("Name cannot be empty");
+      show.error("Name cannot be empty");
       return;
     }
 
     if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      setMessage("Price must be greater than 0");
+      show.error("Price must be greater than 0");
       return;
     }
 
     onAddItem(name.trim(), parsedPrice);
     setName("");
     setPrice("");
-    setMessage("");
+    show.clear();
   }
 
   return (
@@ -116,7 +117,7 @@ function AddItemForm({ onAddItem }) {
         <button type="submit">Add Item</button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }

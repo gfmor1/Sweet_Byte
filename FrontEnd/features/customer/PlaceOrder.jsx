@@ -2,10 +2,11 @@
 "use client";
 
 import { useState } from "react";
+import { StatusMessage, useStatus } from "../../components/StatusMessage";
 
 function PlaceOrder({ restaurant, onPlaceOrder }) {
   const [quantities, setQuantities] = useState({});
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -22,16 +23,16 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
       }));
 
     if (selectedItems.length === 0) {
-      setMessage("Please select at least one item");
+      show.error("Please select at least one item");
       return;
     }
 
     if (restaurant.status !== "OPEN") {
-      setMessage("Restaurant is not open");
+      show.error("Restaurant is not open");
       return;
     }
 
-    setMessage("");
+    show.clear();
     const placed = await onPlaceOrder(selectedItems);
     if (placed) setQuantities({});
   }
@@ -73,7 +74,7 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
         </button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }

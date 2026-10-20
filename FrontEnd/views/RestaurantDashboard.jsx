@@ -19,6 +19,7 @@ import {
   updateOrderStatus
 } from "../services/orderApi";
 import { getEnums } from "../services/enumApi";
+import { StatusMessage, useStatus } from "../components/StatusMessage";
 
 const DEFAULT_REJECT_REASON = "Rejected by restaurant";
 
@@ -26,7 +27,7 @@ function RestaurantDashboard({ restaurantId }) {
   const [restaurant, setRestaurant] = useState(null);
   const [orders, setOrders] = useState([]);
   const [restaurantStatuses, setRestaurantStatuses] = useState([]);
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   useEffect(() => {
     async function loadDashboard() {
@@ -41,7 +42,7 @@ function RestaurantDashboard({ restaurantId }) {
         setOrders(orderList);
         setRestaurantStatuses(enums.restaurantStatuses);
       } catch (error) {
-        setMessage(error.message);
+        show.error(error.message);
       }
     }
 
@@ -49,16 +50,16 @@ function RestaurantDashboard({ restaurantId }) {
   }, [restaurantId]);
 
   if (!restaurant) {
-    return <p>{message || "Loading restaurant..."}</p>;
+    return status.text ? <StatusMessage status={status} /> : <p>Loading restaurant...</p>;
   }
 
   // Runs an API call, shows its error if it fails
   async function run(action, successMessage) {
     try {
       await action();
-      setMessage(successMessage);
+      show.success(successMessage);
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     }
   }
 
@@ -156,7 +157,7 @@ function RestaurantDashboard({ restaurantId }) {
       <h1>SweetByte</h1>
       <h2>Restaurant Dashboard: {restaurant.name}</h2>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
 
       <IncomingOrders
         orders={orders}

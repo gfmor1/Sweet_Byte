@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { login } from "../services/authApi";
+import { StatusMessage, useStatus } from "../components/StatusMessage";
 
 function Login({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -12,7 +13,7 @@ function Login({ onLoginSuccess }) {
     try {
       onLoginSuccess(await login(email, password));
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     }
   }
 
@@ -39,7 +40,7 @@ function Login({ onLoginSuccess }) {
         <button type="submit">Login</button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }

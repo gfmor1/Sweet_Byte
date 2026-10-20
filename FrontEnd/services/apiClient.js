@@ -1,8 +1,14 @@
 import { supabase } from "./supabaseClient";
+import { trackLoading } from "./loadingTracker";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
 
-export async function apiRequest(path, { method = "GET", body } = {}) {
+// Every backend call shows the loading bar while it runs
+export function apiRequest(path, options) {
+  return trackLoading(sendRequest(path, options));
+}
+
+async function sendRequest(path, { method = "GET", body } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -26,7 +32,9 @@ export async function apiRequest(path, { method = "GET", body } = {}) {
     } catch {
       // body was not JSON
     }
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   if (response.status === 204) return null;

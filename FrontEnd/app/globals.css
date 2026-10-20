@@ -285,3 +285,49 @@ input:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* Feedback messages */
+.error-message {
+  color: #c62828;
+  background-color: #fdecea;
+  border-left: 4px solid #c62828;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.success-message {
+  color: #2e7d32;
+  background-color: #edf7ee;
+  border-left: 4px solid #2e7d32;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+/* Loading bar (top of the page while requests are in flight) */
+.loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  z-index: 1000;
+  overflow: hidden;
+  background-color: #f5d3df;
+}
+
+.loading-bar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background-color: #c74778;
+  animation: loading-slide 1s ease-in-out infinite;
+}
+
+@keyframes loading-slide {
+  to {
+    left: 100%;
+  }
+}

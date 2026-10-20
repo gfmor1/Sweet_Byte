@@ -1,20 +1,8 @@
 
 import { useState } from "react";
-import {
-  registerCustomer,
-  registerRestaurantOwner,
-  signUp
-} from "../services/authApi";
+import { REGISTERABLE_ROLES, registerForRole, signUp } from "../services/authApi";
 import { formatEnum } from "../services/enumApi";
-
-// Roles that can self-register, each with its backend register call
-// TODO: COURIER once the backend has /api/auth/register/courier (operators are seeded only)
-const REGISTER_BY_ROLE = {
-  CUSTOMER: (form) =>
-    registerCustomer({ name: form.name, deliveryAddress: form.deliveryAddress }),
-  RESTAURANT_OWNER: (form) =>
-    registerRestaurantOwner({ name: form.name, restaurantName: form.restaurantName })
-};
+import { StatusMessage, useStatus } from "../components/StatusMessage";
 
 function Register({ onRegisterSuccess }) {
   const [role, setRole] = useState("CUSTOMER");
@@ -24,26 +12,31 @@ function Register({ onRegisterSuccess }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
-  const [message, setMessage] = useState("");
+  const [status, show] = useStatus();
   const [submitting, setSubmitting] = useState(false);
 
   async function handleRegister(event) {
     event.preventDefault();
 
     if (password !== confirmPassword) {
-      setMessage("Passwords do not match");
+      show.error("Passwords do not match");
       return;
     }
 
     setSubmitting(true);
-    setMessage("");
+    show.clear();
     try {
       // 1. Supabase account (gives the JWT), 2. SweetByte account for the chosen role
-      await signUp(email, password);
-      const profile = await REGISTER_BY_ROLE[role]({ name, deliveryAddress, restaurantName });
-      onRegisterSuccess(profile);
+      const registration = { role, name, deliveryAddress, restaurantName };
+      const loggedIn = await signUp(email, password, registration);
+      if (!loggedIn) {
+        // "Confirm email" is on: the first login after confirming finishes step 2
+        show.success("Account created! Confirm your email, then log in to finish.");
+        return;
+      }
+      onRegisterSuccess(await registerForRole(registration));
     } catch (error) {
-      setMessage(error.message);
+      show.error(error.message);
     } finally {
       setSubmitting(false);
     }
@@ -56,7 +49,7 @@ function Register({ onRegisterSuccess }) {
 
       <form onSubmit={handleRegister}>
         <select value={role} onChange={(event) => setRole(event.target.value)}>
-          {Object.keys(REGISTER_BY_ROLE).map((value) => (
+          {REGISTERABLE_ROLES.map((value) => (
             <option key={value} value={value}>
               {formatEnum(value)}
             </option>
@@ -120,7 +113,7 @@ function Register({ onRegisterSuccess }) {
         </button>
       </form>
 
-      <p>{message}</p>
+      <StatusMessage status={status} />
     </div>
   );
 }
