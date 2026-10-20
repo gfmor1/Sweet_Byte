@@ -1,0 +1,296 @@
+{
+  "restaurants": [
+    {
+      "name": "SweetByte Bakery",
+      "status": "OPEN",
+      "latitude": 45.4972,
+      "longitude": -73.579,
+      "owner": {
+        "name": "SweetByte Bakery Owner",
+        "email": "restaurant@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Chocolate Cake",
+          "price": 8,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Cookies",
+          "price": 5,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Brownies",
+          "price": 6,
+          "status": "SOLD_OUT"
+        },
+        {
+          "name": "Red Velvet Cake",
+          "price": 9,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Cinnamon Rolls",
+          "price": 5,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "name": "Dessert Corner",
+      "status": "PAUSED",
+      "latitude": 45.5017,
+      "longitude": -73.5673,
+      "owner": {
+        "name": "Dessert Corner Owner",
+        "email": "owner2@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Cupcakes",
+          "price": 4,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Cheesecake",
+          "price": 8,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Macarons",
+          "price": 7,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Tiramisu",
+          "price": 9,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Strawberry Shortcake",
+          "price": 8,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "name": "Sugar Rush Donuts",
+      "status": "OPEN",
+      "latitude": 45.5088,
+      "longitude": -73.554,
+      "owner": {
+        "name": "Sugar Rush Donuts Owner",
+        "email": "owner3@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Glazed Donut",
+          "price": 3,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Boston Cream",
+          "price": 4,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Strawberry Donut",
+          "price": 4,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Maple Donut",
+          "price": 4,
+          "status": "SOLD_OUT"
+        },
+        {
+          "name": "Nutella Donut",
+          "price": 5,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "name": "Gelato Heaven",
+      "status": "OPEN",
+      "latitude": 45.523,
+      "longitude": -73.58,
+      "owner": {
+        "name": "Gelato Heaven Owner",
+        "email": "owner4@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Vanilla Gelato",
+          "price": 5,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Pistachio Gelato",
+          "price": 6,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Mango Sorbet",
+          "price": 5,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Chocolate Gelato",
+          "price": 5,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Strawberry Gelato",
+          "price": 5,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "name": "Waffle Wonderland",
+      "status": "OPEN",
+      "latitude": 45.4851,
+      "longitude": -73.5694,
+      "owner": {
+        "name": "Waffle Wonderland Owner",
+        "email": "owner5@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Belgian Waffle",
+          "price": 7,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Nutella Waffle",
+          "price": 9,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Strawberry Waffle",
+          "price": 9,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Oreo Waffle",
+          "price": 10,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Caramel Waffle",
+          "price": 8,
+          "status": "SOLD_OUT"
+        }
+      ]
+    },
+    {
+      "name": "Choco Paradise",
+      "status": "OPEN",
+      "latitude": 45.5155,
+      "longitude": -73.5617,
+      "owner": {
+        "name": "Choco Paradise Owner",
+        "email": "owner6@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Chocolate Lava Cake",
+          "price": 10,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Chocolate Mousse",
+          "price": 8,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Chocolate Fondue",
+          "price": 12,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Chocolate Truffles",
+          "price": 7,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Fudge Cake",
+          "price": 9,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "name": "Parisian Sweets",
+      "status": "CLOSED",
+      "latitude": 45.531,
+      "longitude": -73.6,
+      "owner": {
+        "name": "Parisian Sweets Owner",
+        "email": "owner7@sweetbyte.test",
+        "password": "demo123"
+      },
+      "menu": [
+        {
+          "name": "Creme Brulee",
+          "price": 9,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Eclair",
+          "price": 6,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Fruit Tart",
+          "price": 8,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Mille-Feuille",
+          "price": 10,
+          "status": "AVAILABLE"
+        },
+        {
+          "name": "Lemon Meringue Tart",
+          "price": 8,
+          "status": "AVAILABLE"
+        }
+      ]
+    }
+  ],
+  "customers": [
+    {
+      "name": "Demo Customer",
+      "email": "customer@sweetbyte.test",
+      "deliveryAddress": "1455 De Maisonneuve Blvd W, Montreal",
+      "latitude": 45.4971,
+      "longitude": -73.5788,
+      "password": "demo123"
+    }
+  ],
+  "couriers": [
+    {
+      "name": "Demo Courier",
+      "email": "courier@sweetbyte.test",
+      "latitude": 45.5,
+      "longitude": -73.57,
+      "password": "demo123"
+    }
+  ],
+  "operators": [
+    {
+      "name": "Demo Operator",
+      "email": "operator@sweetbyte.test",
+      "password": "demo123"
+    }
+  ]
+}
