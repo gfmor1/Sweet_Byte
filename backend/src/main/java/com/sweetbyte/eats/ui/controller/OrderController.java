@@ -73,8 +73,7 @@ public class OrderController {
     @PatchMapping("/{id}/status")
     public OrderResponse updateOrderStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id, @RequestBody UpdateStatusRequest newStatus) {
         User user = currentUser(jwt);
-        Order order = orderService.getOrder(id, user);
-        return OrderResponse.from(orderService.updateOrderStatus(order, newStatus.status(), user));
+        return OrderResponse.from(orderService.updateOrderStatus(id, newStatus.status(), user));
     }
 
     // POST /api/orders/{id}/reject
