@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { StatusMessage, useStatus } from "../../components/StatusMessage";
+import { formatEnum } from "../../services/enumApi";
 
 function MenuItemEditor({ item, onUpdateItem, onRemoveItem }) {
   const [name, setName] = useState(item.name);
