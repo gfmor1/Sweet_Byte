@@ -13,7 +13,7 @@ public interface OrderPermissionStrategy {
 
     boolean canManage(User user, Order order);
 
-    boolean canCnancel(User user, Order order);
+    boolean canCancel(User user, Order order);
 
     boolean canViewRestaurantOrders(User user, Long restaurantId);
 
