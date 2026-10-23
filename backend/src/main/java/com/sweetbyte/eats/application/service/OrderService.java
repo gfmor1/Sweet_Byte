@@ -16,6 +16,6 @@ public interface OrderService {
     Order rejectOrder(Long orderId, User user, String reason);
     List<Order> getUsersOrders(User user);
     List<Order> getRestaurantOrders(Long restaurantId, User user);
-    Order updateOrderStatus(Order order, OrderStatus newStatus, User user);
+    Order updateOrderStatus(Long orderId, OrderStatus newStatus, User user);
     void cancelOrder(Long orderId, User user);
 }

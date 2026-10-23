@@ -1,18 +1,28 @@
 package com.sweetbyte.eats.repository.persistence;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.sweetbyte.eats.application.enums.OrderStatus;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sweetbyte.eats.application.model.Order;
 //load and save orders
 //the queue query (a restaurant’s ACCEPTED/PREPARING orders sorted by arrivalSeq)
 //and the role-scoped lists (orders by customer, orders by restaurant)
+//open-in-view is off, so OrderResponse.from() runs after the session closes:
+//fetch what it reads (restaurant, lines, lines.item) up front to avoid LazyInitializationException
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    @Override
+    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
+    public Optional<Order> findById(Long orderId);
+
+    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
     public List<Order> findByCustomerUserId(Long customerId);
 
+    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
     public List<Order> findByRestaurantRestaurantId(Long restaurantId);
 
     public List<Order> findByRestaurantRestaurantIdAndStatusOrderByArrivalSeqAsc(Long restaurantId, OrderStatus status);
