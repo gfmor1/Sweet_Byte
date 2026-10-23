@@ -1,7 +1,6 @@
 package com.sweetbyte.eats.application.service;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
@@ -11,12 +10,12 @@ import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
-import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.model.MenuItem;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
+import com.sweetbyte.eats.application.permission.OrderPermissionResolver;
 @Service 
 public class OrderServiceImpl implements OrderService {
 
@@ -24,14 +23,18 @@ public class OrderServiceImpl implements OrderService {
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
+    private final OrderPermissionResolver permissionResolver;
+
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
         MenuItemRepository menuItemRepository,
-        EventService eventService) {
+        EventService eventService,
+        OrderPermissionResolver permissionResolver) {
         this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
+        this.permissionResolver = permissionResolver;
     }
 
     @Override
@@ -77,20 +80,15 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
-        if (!isRestaurantOwner(user, restaurantId) && user.getRole() != Role.OPERATOR)
-            throw new PermissionDeniedException("User does not have permission to view this restaurant's orders");
-        return orderRepository.findByRestaurantRestaurantId(restaurantId);
+       permissionResolver.requireViewRestaurantOrders(user, restaurantId); //refactored to strategy method
+       return orderRepository.findByRestaurantRestaurantId(restaurantId);
     }
 
     @Override
     @Transactional
     public Order getOrder(Long orderId, User user) {
         Order order = findOrderById(orderId);
-        boolean assignedCourier = order.getCourier() != null 
-            && order.getCourier().getUserId().equals(user.getUserId());
-        boolean isCustomer = order.getCustomer().getUserId().equals(user.getUserId());
-        if (!isCustomer && !assignedCourier)
-            checkRestaurantOrOperator(order, user);
+        permissionResolver.requireView(user, order); //refactored with strategy method
         return order;
     }
 
@@ -98,7 +96,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public Order rejectOrder(Long orderId, User user, String reason) {
         Order order = findOrderById(orderId);
-        checkRestaurantOrOperator(order, user);
+        permissionResolver.requireManage(user, order);
         OrderStatus from = order.getStatus();
         order.reject(reason);
         Order saved = orderRepository.save(order);
@@ -109,15 +107,13 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Override
     public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+        permissionResolver.requireManage(user, order); //refactored with strategy method
         OrderStatus from = order.getStatus();
         if (newStatus == OrderStatus.ACCEPTED) {
-            checkRestaurantOrOperator(order, user);
             order.accept();
         } else if (newStatus == OrderStatus.PREPARING) {
-            checkRestaurantOrOperator(order, user);
             order.startPreparing();
         } else if (newStatus == OrderStatus.READY) {
-            checkRestaurantOrOperator(order, user);
             order.markReady();
         } else
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
@@ -130,36 +126,18 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void cancelOrder(Long orderId, User user) {
         Order order = findOrderById(orderId);
+        permissionResolver.requireCancel(user,order); //refactored with Strategy method
         OrderStatus from = order.getStatus();
-        if (user.getRole() == Role.CUSTOMER) {
-            if (!order.getCustomer().getUserId().equals(user.getUserId())) {
-                throw new PermissionDeniedException("User does not have permission to cancel this order");
-            }
-            order.cancelByCustomer();
-        } else if (user.getRole() == Role.OPERATOR) {
-            order.cancelByOperator();
-        } else
-            throw new PermissionDeniedException("User does not have permission to cancel this order");
+        order.cancelByCustomer();
         orderRepository.save(order);
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
     }
 
-    private void checkRestaurantOrOperator(Order order, User user) {
-        if (user.getRole() == Role.OPERATOR)
-            return;
-        if (isRestaurantOwner(user, order.getRestaurant().getRestaurantId()))
-            return;
-        else
-            throw new PermissionDeniedException("User does not have permission to perform this action");
-    }
+
 
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
             .orElseThrow(() -> new NotFoundException("Order", orderId));
     }
 
-    private boolean isRestaurantOwner(User user, Long restaurantId) {
-        return user.getRole() == Role.RESTAURANT_OWNER
-            && Objects.equals(((RestaurantOwner)user).getRestaurant().getRestaurantId(), restaurantId);
-    }
 }
