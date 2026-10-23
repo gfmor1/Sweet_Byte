@@ -4,8 +4,10 @@ import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.enums.MenuItemStatus;
 import com.sweetbyte.eats.application.model.MenuItem;
+import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.User;
+import com.sweetbyte.eats.application.permission.OrderPermissionResolver;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import org.springframework.stereotype.Service;
@@ -20,12 +22,12 @@ public class MenuServiceImpl implements MenuService{
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
-    private final RestaurantAccess restaurantAccess;
+    private final OrderPermissionResolver permissionResolver;
 
     public MenuServiceImpl(RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
-                           EventService eventService, RestaurantAccess restaurantAccess){
+                           EventService eventService, OrderPermissionResolver permissionResolver){
         this.eventService = eventService;
-        this.restaurantAccess = restaurantAccess;
+        this.permissionResolver = permissionResolver;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
     }
@@ -48,7 +50,7 @@ public class MenuServiceImpl implements MenuService{
 
     //helper method to change to menu item status
     private MenuItem changeItemStatus(Long restaurantID, Long menuItemID, MenuItemStatus status, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load the menuItem
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
         //change the status
@@ -83,7 +85,7 @@ public class MenuServiceImpl implements MenuService{
 
     @Override
     public MenuItem addMenuItem(Long restaurantID, String name, Double price, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load the restaurant where the item belongs to
         Restaurant restaurant = loadRestaurant(restaurantID);
 
@@ -98,7 +100,7 @@ public class MenuServiceImpl implements MenuService{
 
     @Override
     public MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load menu item and make sure it belongs to the restaurant
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
 
@@ -117,7 +119,7 @@ public class MenuServiceImpl implements MenuService{
 
     @Override
     public List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load menu item and make sure it belongs to the restaurant
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);
 
