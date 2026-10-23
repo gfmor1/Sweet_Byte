@@ -108,7 +108,9 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+    public Order updateOrderStatus(Long orderId, OrderStatus newStatus, User user) {
+        // load inside this transaction: a detached order would be merged into a copy with lazy proxies
+        Order order = findOrderById(orderId);
         OrderStatus from = order.getStatus();
         if (newStatus == OrderStatus.ACCEPTED) {
             checkRestaurantOrOperator(order, user);

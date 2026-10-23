@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import IncomingOrders from "../features/restaurant/IncomingOrders";
 import OrderQueue from "../features/restaurant/OrderQueue";
 import ManageMenu from "../features/restaurant/ManageMenu";
+import { getEnums, formatEnum } from "../services/enumApi";
 import {
   addMenuItem,
   changeRestaurantStatus,
@@ -18,7 +19,6 @@ import {
   rejectOrder,
   updateOrderStatus
 } from "../services/orderApi";
-import { getEnums } from "../services/enumApi";
 import { StatusMessage, useStatus } from "../components/StatusMessage";
 
 const DEFAULT_REJECT_REASON = "Rejected by restaurant";
