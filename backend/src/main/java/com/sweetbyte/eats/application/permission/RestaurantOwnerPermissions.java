@@ -7,7 +7,7 @@ import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
 
-
+@Component
 public class RestaurantOwnerPermissions implements OrderPermissionStrategy {
 
     //helper method
