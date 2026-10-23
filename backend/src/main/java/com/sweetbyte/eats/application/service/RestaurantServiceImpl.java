@@ -6,6 +6,7 @@ import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.enums.RestaurantStatus;
+import com.sweetbyte.eats.application.permission.OrderPermissionResolver;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
@@ -20,15 +21,15 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     private final RestaurantRepository restaurantRepository;
     private final OrderRepository orderRepository;
-    private final RestaurantAccess restaurantAccess;
+    private final OrderPermissionResolver permissionResolver;
 
 
     //Constructor (Spring injects the repositories and the shared access rule)
     public RestaurantServiceImpl(RestaurantRepository restaurantRepository, OrderRepository orderRepository,
-                                 RestaurantAccess restaurantAccess){
+                                 OrderPermissionResolver permissionResolver){
         this.restaurantRepository = restaurantRepository;
         this.orderRepository = orderRepository;
-        this.restaurantAccess = restaurantAccess;
+        this.permissionResolver = permissionResolver;
     }
 
     //return all the restaurants
@@ -47,7 +48,7 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     @Override
     public Restaurant pauseRestaurant(Long restaurantID, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
         //Load restaurant by ID from the repository layer
         Restaurant restaurant = getRestaurantByID(restaurantID);
         //Call the pause
@@ -59,7 +60,7 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     @Override
     public Restaurant reOpenRestaurant(Long restaurantID, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
 
         //Load restaurant by ID from the repo layer
         Restaurant restaurant = getRestaurantByID(restaurantID);
@@ -74,7 +75,7 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     @Override
     public Restaurant changeStatus(Long restaurantID, RestaurantStatus status, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
         //Load restaurant by ID from the repo layer
         Restaurant restaurant = getRestaurantByID(restaurantID);
         //call changeStatus
@@ -87,7 +88,7 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     @Override
     public PreparationQueue getPreparationQueue(Long restaurantID, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
         //Load the restaurant (throws NotFound if it doesn't exist)
         Restaurant restaurant = getRestaurantByID(restaurantID);
 
@@ -107,7 +108,7 @@ public class RestaurantServiceImpl implements RestaurantService{
 
     @Override
     public Long getQueueSize(Long restaurantID, User user){
-        restaurantAccess.requireOwnerOrOperator(user, restaurantID);
+        permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
         //Make sure the restaurant exists
         getRestaurantByID(restaurantID);
 
