@@ -106,7 +106,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Transactional
     @Override
-    public Order updateOrderStatus(Order order, OrderStatus newStatus, User user) {
+    public Order updateOrderStatus(Long orderId, OrderStatus newStatus, User user) {
+        Order order = findOrderById(orderId);
         permissionResolver.requireManage(user, order); //refactored with strategy method
         OrderStatus from = order.getStatus();
         if (newStatus == OrderStatus.ACCEPTED) {
