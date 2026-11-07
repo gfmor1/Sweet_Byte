@@ -1,6 +1,8 @@
-package com.sweetbyte.eats.application.model;
+package com.sweetbyte.eats.application.service;
 
+import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.OrderSummary;
+import com.sweetbyte.eats.application.model.User;
 
 public interface OrderSummaryService {
 
