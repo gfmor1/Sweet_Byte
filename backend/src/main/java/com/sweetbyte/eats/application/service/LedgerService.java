@@ -9,7 +9,7 @@ import java.util.List;
 public interface LedgerService {
 
     LedgerEntry recordFinalState(Order order); //UC II record order state in ledger
-    LedgerEntry refund(long orderId, String reason, User user); //UC V Operator issues refund
+    LedgerEntry refund(Long orderId, String reason, User user); //UC V Operator issues refund
     List<LedgerEntry> history(User user); //UC IV order history (role-scoped)
     List<LedgerEntry> entriesFor(Long orderId);
  }
