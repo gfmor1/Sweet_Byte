@@ -1,66 +1,93 @@
-
 "use client";
 
 import { useState } from "react";
-import { StatusMessage, useStatus } from "../../components/StatusMessage";
 
-function PlaceOrder({ restaurant, onPlaceOrder }) {
+export default function PlaceOrder({ restaurant, onPlaceOrder }) {
   const [quantities, setQuantities] = useState({});
-  const [status, show] = useStatus();
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const selectedItems = restaurant.menu.filter(
+    (item) => (quantities[item.id] || 0) > 0
+  );
+
+  const canPlaceOrder =
+    restaurant.status === "OPEN" &&
+    selectedItems.length > 0 &&
+    selectedItems.every((item) => item.status === "AVAILABLE");
+
+  function updateQuantity(itemId, value) {
+    const quantity = Math.max(0, Math.floor(Number(value) || 0));
+
+    setQuantities((previous) => ({
+      ...previous,
+      [itemId]: quantity,
+    }));
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
 
-    const selectedItems = restaurant.menu
-      .filter(
-        (item) =>
-          item.status === "AVAILABLE" &&
-          (quantities[item.id] || 0) > 0
-      )
-      .map((item) => ({
-        id: item.id,
-        quantity: quantities[item.id],
-      }));
+    if (submitting) return;
 
-    if (selectedItems.length === 0) {
-      show.error("Please select at least one item");
+    if (!canPlaceOrder) {
+      setError("Select available items from an open restaurant.");
       return;
     }
 
-    if (restaurant.status !== "OPEN") {
-      show.error("Restaurant is not open");
-      return;
-    }
+    const orderLines = selectedItems.map((item) => ({
+      id: item.id,
+      quantity: quantities[item.id],
+    }));
 
-    show.clear();
-    const placed = await onPlaceOrder(selectedItems);
-    if (placed) setQuantities({});
+    setError("");
+    setSubmitting(true);
+
+    try {
+      const successful = await onPlaceOrder(orderLines);
+
+      if (successful) {
+        setQuantities({});
+      }
+    } catch (err) {
+      setError(err.message || "Could not place your order.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
-    <div>
+    <section>
       <h2>Place Order</h2>
+
+      <p>Restaurant status: {restaurant.status}</p>
 
       <form onSubmit={handleSubmit}>
         {restaurant.menu.map((item) => (
-          <div key={item.id}>
-            <p>{item.name}</p>
-            <p>Price: ${item.price.toFixed(2)}</p>
+          <div key={item.id} className="order-card">
+            <h3>{item.name}</h3>
+
+            <p>Price: ${Number(item.price).toFixed(2)}</p>
+
+            <p>
+              {item.status === "AVAILABLE" ? "Available" : "Sold out"}
+            </p>
+
+            <label htmlFor={`quantity-${item.id}`}>Quantity</label>
 
             <input
+              id={`quantity-${item.id}`}
               type="number"
               min="0"
               step="1"
               value={quantities[item.id] ?? 0}
-              disabled={item.status !== "AVAILABLE"}
+              disabled={
+                submitting ||
+                (item.status !== "AVAILABLE" &&
+                  !(quantities[item.id] > 0))
+              }
               onChange={(event) =>
-                setQuantities({
-                  ...quantities,
-                  [item.id]: Math.max(
-                    0,
-                    Math.floor(Number(event.target.value) || 0)
-                  ),
-                })
+                updateQuantity(item.id, event.target.value)
               }
             />
           </div>
@@ -68,15 +95,17 @@ function PlaceOrder({ restaurant, onPlaceOrder }) {
 
         <button
           type="submit"
-          disabled={restaurant.status !== "OPEN"}
+          disabled={!canPlaceOrder || submitting}
         >
-          Place Order
+          {submitting ? "Placing order..." : "Place Order"}
         </button>
       </form>
 
-      <StatusMessage status={status} />
-    </div>
+      {error && (
+        <p role="alert" className="error-message">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }
-
-export default PlaceOrder;
