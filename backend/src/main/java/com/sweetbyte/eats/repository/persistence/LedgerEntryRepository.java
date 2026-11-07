@@ -24,4 +24,6 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
     List<LedgerEntry> findByRestaurantIdOrderByRecordedAtAsc(Long restaurantId); // restaurant
 
     List<LedgerEntry> findByCourierIdOrderByRecordedAtAsc(Long courierId);       // courier
+
+    boolean existsbyOrderIdAndType(Long orderId, LedgerEntryType type);
 }
