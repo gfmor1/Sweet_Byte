@@ -8,6 +8,7 @@ import CustomerDashboard from "./views/CustomerDashboard";
 import RestaurantDashboard from "./views/RestaurantDashboard";
 import { getCurrentUser, logout, onSignedOut } from "./services/authApi";
 import LoadingBar from "./components/LoadingBar";
+import OperatorDashboard from "./views/OperatorDashboard";
 
 function App() {
   const [page, setPage] = useState("login");
@@ -55,12 +56,14 @@ function App() {
         <button onClick={handleLogout}>Logout</button>
 
         {user.role === "CUSTOMER" ? (
-          <CustomerDashboard />
-        ) : user.role === "RESTAURANT_OWNER" ? (
-          <RestaurantDashboard restaurantId={user.restaurantId} />
-        ) : (
-          <p>Dashboard not implemented yet.</p>
-        )}
+  <CustomerDashboard />
+) : user.role === "RESTAURANT_OWNER" ? (
+  <RestaurantDashboard restaurantId={user.restaurantId} />
+) : user.role === "OPERATOR" ? (
+  <OperatorDashboard user={user} />
+) : (
+  <p>Dashboard not implemented yet.</p>
+)}
       </div>
     );
   }
