@@ -12,8 +12,14 @@ import { money } from "./FareBreakdown";
 export default function OrderHistory({
   refreshKey = 0,
   showAmounts = true,
+  ownerOrderIds = null, // array of order ids the viewer may see; null = no extra filter
   onLog,
 }) {
+  const ownOrderIds = useRef(null);
+  ownOrderIds.current = ownerOrderIds
+    ? new Set(ownerOrderIds.map(String))
+    : null;
+
   const [entries, setEntries] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,7 +50,22 @@ export default function OrderHistory({
           throw new Error("History must be an array of entries.");
         }
 
-        if (active) setEntries(data);
+        if (!active) return;
+
+        // Role scoping: when the caller knows the user's own order ids,
+        // never show entries for any other order.
+        const scoped = ownOrderIds
+          ? data.filter((entry) =>
+              ownOrderIds.current.has(String(entry.orderId))
+            )
+          : data;
+
+        setEntries(scoped);
+
+        logCallback.current?.({
+          command: "Load order history",
+          result: "Success",
+        });
       })
       .catch((err) => {
         if (!active) return;
@@ -67,15 +88,28 @@ export default function OrderHistory({
 
   return (
     <section>
-      <h2>Order History</h2>
+      <h2 style={{ fontSize: "1.15rem" }}>Order History</h2>
 
       {!pricingEnabled ? (
-        <p>
-          History will appear once the pricing service is connected.
-        </p>
+        <div
+          role="status"
+          style={{
+            padding: "0.75rem 1rem",
+            border: "1px dashed #9aa5b1",
+            borderRadius: 10,
+          }}
+        >
+          <strong>Order history is not available yet.</strong>
+          <p style={{ margin: "0.25rem 0 0" }}>
+            The pricing service is not connected. In mock mode
+            (NEXT_PUBLIC_USE_MOCKS=true) sample history is shown; with a
+            real backend it appears once the pricing endpoints exist.
+          </p>
+        </div>
       ) : (
         <>
           <button
+            className="btn-secondary"
             disabled={loading}
             onClick={() => setAttempt((value) => value + 1)}
           >
@@ -89,8 +123,8 @@ export default function OrderHistory({
           ) : entries.length === 0 ? (
             <p>No history entries yet.</p>
           ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table>
+            <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+              <table style={{ width: "100%" }}>
                 <thead>
                   <tr>
                     <th>Entry</th>

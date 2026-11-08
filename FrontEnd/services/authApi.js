@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { supabase } from "./supabaseClient";
 import { trackLoading } from "./loadingTracker";
+import { useMocks } from "./config";
 
 // Auth = Supabase account (email + password, gives the JWT)
 //      + SweetByte account (our users row: role, restaurant…), created by /api/auth/register/*.
@@ -70,8 +71,32 @@ export function registerRestaurantOwner({ name, restaurantName }) {
 
 // TODO: registerCourier (backend endpoint not built yet)
 
+// Mock mode only (NEXT_PUBLIC_USE_MOCKS=true): the backend cannot describe COURIER/OPERATOR
+// accounts yet (/api/auth/me throws), so these demo accounts sign in locally, without the backend.
+const MOCK_SESSION_KEY = "sweetbyte.mockUser";
+const MOCK_ACCOUNTS = {
+  "courier@sweetbyte.test": { userId: "mock-courier", name: "Demo Courier", role: "COURIER" },
+  "operator@sweetbyte.test": { userId: "mock-operator", name: "Demo Operator", role: "OPERATOR" }
+};
+
+function readMockUser() {
+  if (!useMocks) return null;
+  try {
+    return JSON.parse(window.sessionStorage.getItem(MOCK_SESSION_KEY));
+  } catch {
+    return null;
+  }
+}
+
 // Returning user: Supabase checks the password, then we load the SweetByte profile
 export async function login(email, password) {
+  const mockAccount = useMocks ? MOCK_ACCOUNTS[email.trim().toLowerCase()] : null;
+  if (mockAccount) {
+    if (password !== "demo123") throw new Error("Invalid login credentials");
+    const profile = { ...mockAccount, email: email.trim().toLowerCase() };
+    window.sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(profile));
+    return profile;
+  }
   const { data, error } = await trackLoading(supabase.auth.signInWithPassword({ email, password }));
   throwIfError(error);
   return loadProfile(data.user);
@@ -84,6 +109,8 @@ export function getMe() {
 
 // Page load / reload: Supabase keeps the session in the browser; null = not logged in
 export async function getCurrentUser() {
+  const mockUser = readMockUser();
+  if (mockUser) return mockUser;
   const { data } = await supabase.auth.getSession();
   return data.session ? loadProfile(data.session.user) : null;
 }
@@ -98,6 +125,10 @@ export function onSignedOut(callback) {
 }
 
 export async function logout() {
+  if (readMockUser()) {
+    window.sessionStorage.removeItem(MOCK_SESSION_KEY);
+    return;
+  }
   const { error } = await trackLoading(supabase.auth.signOut());
   throwIfError(error);
 }

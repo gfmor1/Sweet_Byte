@@ -37,7 +37,15 @@ export default function OrderSummary({ orderId, onLog }) {
 
     getOrderSummary(orderId)
       .then((data) => {
-        if (active) setSummary(data);
+        if (!active) return;
+
+        setSummary(data);
+
+        logCallback.current?.({
+          command: "Load order summary",
+          orderId,
+          result: "Success",
+        });
       })
       .catch((err) => {
         if (!active) return;
@@ -62,7 +70,10 @@ export default function OrderSummary({ orderId, onLog }) {
   if (!pricingEnabled) {
     return (
       <p>
-        Order pricing will appear once the pricing service is connected.
+        Itemized pricing for this order is not available yet: the pricing
+        service is not connected. Turn on mock mode
+        (NEXT_PUBLIC_USE_MOCKS=true) or wait for the backend pricing
+        endpoints.
       </p>
     );
   }

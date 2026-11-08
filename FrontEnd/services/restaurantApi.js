@@ -14,7 +14,10 @@ function toRestaurant(restaurant) {
   return {
     id: restaurant.restaurantID,
     name: restaurant.name,
-    status: restaurant.status
+    status: restaurant.status,
+    latitude: restaurant.latitude,
+    longitude: restaurant.longitude,
+    queueSize: restaurant.queueSize
   };
 }
 

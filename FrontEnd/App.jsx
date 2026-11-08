@@ -4,13 +4,13 @@
 import { useEffect, useState } from "react";
 import Login from "./views/Login";
 import Register from "./views/Register";
-import CustomerDashboard from "./views/CustomerDashboard";
-import RestaurantDashboard from "./views/RestaurantDashboard";
 import { getCurrentUser, logout, onSignedOut } from "./services/authApi";
 import LoadingBar from "./components/LoadingBar";
-import OperatorDashboard from "./views/OperatorDashboard";
+import AppShell from "./components/AppShell";
+import { ConsoleProvider, useConsole } from "./components/ConsoleContext";
 
-function App() {
+function AppContent() {
+  const { clear } = useConsole();
   const [page, setPage] = useState("login");
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -36,6 +36,7 @@ function App() {
 
   async function handleLogout() {
     await logout();
+    clear();
     setUser(null);
     setPage("login");
   }
@@ -53,17 +54,7 @@ function App() {
     return (
       <div className="app-shell">
         <LoadingBar />
-        <button onClick={handleLogout}>Logout</button>
-
-        {user.role === "CUSTOMER" ? (
-  <CustomerDashboard />
-) : user.role === "RESTAURANT_OWNER" ? (
-  <RestaurantDashboard restaurantId={user.restaurantId} />
-) : user.role === "OPERATOR" ? (
-  <OperatorDashboard user={user} />
-) : (
-  <p>Dashboard not implemented yet.</p>
-)}
+        <AppShell user={user} onLogout={handleLogout} />
       </div>
     );
   }
@@ -71,13 +62,24 @@ function App() {
   return (
     <div className="app-shell">
       <LoadingBar />
-      <button onClick={() => setPage("login")}>
-        Login
-      </button>
-
-      <button onClick={() => setPage("register")}>
-        Register
-      </button>
+      <nav className="auth-nav" aria-label="Account">
+        <button
+          type="button"
+          className={page === "login" ? "chip chip-active" : "chip"}
+          aria-pressed={page === "login"}
+          onClick={() => setPage("login")}
+        >
+          Login
+        </button>
+        <button
+          type="button"
+          className={page === "register" ? "chip chip-active" : "chip"}
+          aria-pressed={page === "register"}
+          onClick={() => setPage("register")}
+        >
+          Register
+        </button>
+      </nav>
 
       {sessionMessage && <p className="error-message">{sessionMessage}</p>}
 
@@ -89,6 +91,14 @@ function App() {
         )}
       </div>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <ConsoleProvider>
+      <AppContent />
+    </ConsoleProvider>
   );
 }
 
