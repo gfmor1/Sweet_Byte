@@ -6,12 +6,14 @@ import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.PricingConfig;
 import com.sweetbyte.eats.application.pricing.*;
 import com.sweetbyte.eats.repository.persistence.BillingRecordRepository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.model.BillingRecord;
 
 
 import java.util.Objects;
 
+@Service
 public class PricingServiceImpl implements PricingService{
 
     private final BillingRecordRepository billingRecordRepository;

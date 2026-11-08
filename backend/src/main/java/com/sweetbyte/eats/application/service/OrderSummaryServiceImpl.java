@@ -10,6 +10,7 @@ import com.sweetbyte.eats.repository.persistence.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class OrderSummaryServiceImpl implements OrderSummaryService{
 
     private final OrderRepository orderRepository;
@@ -26,6 +27,7 @@ public class OrderSummaryServiceImpl implements OrderSummaryService{
         this.pricingService = pricingService;
         this.ledgerService = ledgerService;
     }
+
 
     @Override
     @Transactional(readOnly = true)

@@ -9,6 +9,7 @@ import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.LedgerEntryRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
@@ -16,6 +17,7 @@ import java.util.List;
 
 import java.math.BigDecimal;
 
+@Service
 public class LedgerServiceImpl implements LedgerService{
 
     private final LedgerEntryRepository ledgerEntryRepository;
