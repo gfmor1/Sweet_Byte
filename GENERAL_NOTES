@@ -2,45 +2,42 @@
 
 On the logic to assigning ready orders to couriers:
 
-Shortest straight line distance from courier to restaurant, among idle on-duty couriers (tie breaker is smaller courier id)
+Shortest straight line distance to restaurant (tie breaker is smaller courier id)
 
 This implies a couple things:
 
-1- Every courier should have a current location in terms of Longitude and Latitude:
-Backend: already in the Courier model. Positions are stored values: they start from the seed file and change at pickup (restaurant position) and delivery (drop-off position). Live GPS is out of scope.
-Couriers who register themselves also need a starting position (the Courier constructor requires one), so the config should define a default.
-Frontend: reads the stored positions from the backend and polls for updates.
+1- Every courier should have a current location in terms of  Longitude and Latitude :
+Backend: (make sure this exists in our model so we can send it)
+Frontend: We should track it in our frontend and there are 2 ways to do it: Either continuously track it live or on every ready order the system pings every courier for their location and based off of that request the system can know whos closest
 2-Every restaurant should have a fixed location in terms of Longitude and Latitude:
-Backend: read directly from the configuration file (R-ORD-01). No address to coordinates conversion needed.
+Backend: we should add that to our models and make sure the address is converted to longitude and latitude
 
 
 
 The flow would be
 
-order is marked ready --> system reads the stored location of all idle couriers --> system offers delivery to one courier based off rule (closest straight line ....) --> courier can either accept or decline --> if declined or if no courier is available, order goes to the queue
+order is marked ready --> system pings all available couriers for their location --> system assigns delivery request to courier based off rule (closest straight line ....) --> courier can either accept or decline --> if no courier is available order goes to a queue
 
 Regarding Reassignment:
 
-UC-DLV-07 Reassign order (operator): only for orders whose courier accepted and then went offline before pickup. Reassignment only happens by operator command (R-DLV-02).
-A courier cannot go offline while carrying (R-DLV-03). An offer that was not yet accepted goes back to the queue when the courier goes off duty, it does not need reassigning.
+DRV-7 Reassign order (system) : only for couriers whos status went offline
 
-Track delivery:
-UC-DLV-08, delivery is tracked by polling the order status and the stored longitude and latitude of the courier who is either assigned (on their way to the restaurant) or carrying (from restaurant to customer)
+Track delivery :
+DRV-8, delivery is tracked by constantly pinging longitude and latitude of courier who is either assigned (on their way to the restaurant) or carrying (from restaurant to customer)
 Maps and locations:
 
-All location and map related stuff would be managed through longitude and latitude. Ie every model (or object) whose location should be tracked has a location with longitude and latitude and methods to get them
+All location and map related stuff would be managed through longitude and latitude. Ie we should make sure that every model (or object) which its location should be tracked has a longitude and latitude attributes and methods to get them
+  this would be a good place to implement a design pattern:
 
-Design pattern: a shared Location value object (latitude, longitude, validation, distanceTo) used by Courier, Customer and Restaurant through composition. Today latitude and longitude are duplicated on each model.
-Decorator is already used where it fits: fare calculation (DeliveryFeeDecorator, ServiceFeeDecorator, SmallOrderSurchargeDecorator).
+Decorator, or a similar one, we create a Trackable class or a Location class with attributes (longitude or latittude) and methods and deocrate every class who uses it
 
 
 
 Queues:
 
-Dispatch queue: first in first out, one general queue for all ready orders across all restaurants that have no courier
-So if an order doesn't have an available courier it doesnt get silenced. It is retried whenever a courier becomes idle (R-DLV-04)
-A declined order goes back to the front of the queue and other idle couriers are tried first
-Not to be confused with the preparation queue, which is per restaurant (R-ORD-03)
+order queues are first in first out general queues for all orders across all restaurants
+So if an order doesn't have an available courier it doesnt get silenced
+One queue for all unassigned orders
 
 
 
@@ -48,13 +45,11 @@ Refunds:
 
 Every order details has a request refund with two subcategories or reasons:
 
-1- Order has not been delivered (courier stole or lost the order after pickup)
-2- Unsatisfied with order (delivered less than 1.5 hours ago)
+1- Order has not been delivered
+2- Unsatisfied with order
 
-Frontend: Every eligible order details has a request refund button with a form
+Frontend: Every order details has an request refund button with a form
 Backend: Every refund request has to be reviewed and verified by a system operator
-
-Deviation from the spec to confirm with the lab demonstrator: R-PRC-05 only allows refunded from delivered. Reason 1 adds picked_up --> refunded, which also needs a backend change (Order.refund() currently rejects it).
 
 
 
@@ -73,7 +68,6 @@ Confirm delivery
 Order in queue (when no courier available)
 Reassign order
 Track delivery
-Go on/off duty
 
 
 PRC:
@@ -90,30 +84,29 @@ Decline Refund Order Request
 
 1- Assign order to on duty courier (system) Jerome
 ID:
-UC-DLV-01
+UC-DRV-01
 Title:
 Assign order to on duty courier
 Description:
-When an order is marked as ready the system should offer the delivery to one idle on-duty courier based off the following rule:
-shortest straight line distance from courier to restaurant, smallest courier id is the tie breaker.
+When an order is marked as ready the system should assign the delivery request to available couriers based off the following rule:
+shortest straight line distance from courier to restaurant smallest courier id is the tie breaker.
 Primary Actor:
 System
 Preconditions:
 Order is marked as ready
-One or more couriers are Idle (otherwise see UC-DLV-06)
+One or more couriers are Idle
 Postconditions:
-Delivery request is sent to the closest, in terms of straight line distance, courier, who can then accept or decline
-The courier is Assigned and holds only this order
+Delivery request is sent to the closest, in terms of straight line distance, courier which he can then accept or decline
 Inputs:
 Restaurant location
-All idle courier locations
+All available courier locations
 Order information, including destination location
 Outputs:
 Delivery request sent to courier
 Main Success Scenario:
 An order is marked as ready
-The system reads the stored location (longitude and latitude) of all idle couriers
-The system calculates the straight line distance from each of those couriers to the restaurant
+The system fetches all location (longitude and latitude) of all available couriers
+The system calculates all straight line distance from all couriers to the restaurant
 The system sends a delivery request to the closest courier, using the smallest courier id as a tie breaker.
 
 
@@ -122,139 +115,115 @@ The system sends a delivery request to the closest courier, using the smallest c
 
 
 
-2- Accept order (courier) Rada
+2- Accept order (courrier) Rada
 ID:
-UC-DLV-02
+UC-DRV-02
 Title:
 Accept order
 Description:
-A courier accepts the delivery request offered to them and becomes responsible for picking up and delivering that order. Once accepted, the order can only be moved to another courier by operator command.
+
+
 Primary Actor:
-Courier
+
+
 Preconditions:
-Courier is logged in and Assigned
-The order has been offered to this courier and has not been accepted yet
+
+
 Postconditions:
-The offer is marked as accepted
-The order is bound to this courier
-The courier can confirm pickup
+
+
 Inputs:
-Authenticated courier identity
-Offered order
+
+
 Outputs:
-Updated offer shown as accepted
-One output console line (DASH)
+
+
 Main Success Scenario:
-The courier views the offered order
-The courier selects Accept offer
-The system verifies that the offer belongs to this courier and is still pending
-The system marks the offer as accepted
-The system displays the accepted order and logs the command
 
 
 
 
-3- Decline order (courier) Rada
+3- Decline order (courrier) Rada
 ID:
-UC-DLV-03
+UC-DRV-03
 Title:
 Decline order
 Description:
-A courier declines the delivery request offered to them. The order returns to the dispatch queue so that another courier can take it.
+
+
 Primary Actor:
-Courier
+
+
 Preconditions:
-Courier is logged in and Assigned
-The order has been offered to this courier and has not been accepted yet
+
+
 Postconditions:
-The order is no longer bound to this courier and is at the front of the dispatch queue
-The courier is Idle
-The order is offered to the next eligible courier, or waits in the queue if there is none
+
+
 Inputs:
-Authenticated courier identity
-Offered order
+
+
 Outputs:
-Offer removed from the courier's view
-One output console line (DASH)
+
+
 Main Success Scenario:
-The courier views the offered order
-The courier selects Decline offer
-The system verifies that the offer belongs to this courier and is still pending
-The system returns the order to the front of the dispatch queue and sets the courier to Idle
-The system applies the dispatch rule to the other idle couriers
-The system updates the courier's view and logs the command
 
 
 
 
 
-4-Confirm pickup (courier) Rada
+4-Confirm pickup (courrier) Rada
 ID:
-UC-DLV-04
+UC-DRV-04
 Title:
 Confirm pickup
 Description:
-A courier confirms that they collected an accepted order from the restaurant. This is the handoff from restaurant to courier.
+
+
 Primary Actor:
-Courier
+
+
 Preconditions:
-Courier is logged in and Assigned
-The courier has accepted the order
-The order is Ready
+
+
 Postconditions:
-The order is Picked Up
-The courier is Carrying
-The courier's stored position is the restaurant's position
-The transition is recorded with an event id
+
+
 Inputs:
-Authenticated courier identity
-Accepted order
+
+
 Outputs:
-Updated order and courier status
-Updated map
-One output console line (DASH)
+
+
 Main Success Scenario:
-The courier arrives at the restaurant and selects Confirm Pickup
-The system verifies that the courier accepted this order and that it is Ready
-The system moves the order to Picked Up and the courier to Carrying
-The system sets the courier's position to the restaurant
-The system records the event, updates the map and logs the command
 
 
 
 
 5- Confirm delivery (courier) Octavian
 ID:
-UC-DLV-05
+UC-DRV-05
 Title:
 Confirm delivery
 Description:
-A courier confirms that they handed the order to the customer. This closes the delivery and makes the courier available again.
+
+
 Primary Actor:
-Courier
+
+
 Preconditions:
-Courier is logged in and Carrying
-The order is Picked Up and is held by this courier
+
+
 Postconditions:
-The order is Delivered, with a delivery timestamp
-The courier is Idle and their stored position is the drop-off position
-The order charge is recorded in the ledger (UC-PRC-02)
-The dispatch queue is retried (UC-DLV-06)
-The transition is recorded with an event id
+
+
 Inputs:
-Authenticated courier identity
-Carried order
+
+
 Outputs:
-Updated order and courier status
-Order summary available to the customer (UC-PRC-03)
-One output console line (DASH)
+
+
 Main Success Scenario:
-The courier reaches the customer and selects Confirm Delivery
-The system verifies that the courier is carrying this order and that it is Picked Up
-The system moves the order to Delivered and records the event
-The system sets the courier to Idle at the drop-off position
-The system records the order charge
-The system retries the dispatch queue, updates the map and logs the command
 
 
 
@@ -262,66 +231,56 @@ The system retries the dispatch queue, updates the map and logs the command
 
 6-Order in queue (when no courier available) (system) Octavian
 ID:
-UC-DLV-06
+UC-DRV-06
 Title:
 Order in queue (when no courier available)
 Description:
-A ready order that no courier can take waits in a single first in, first out dispatch queue, visible to the operator. The system retries assignment whenever a courier becomes idle, so no order is dropped.
+
+
 Primary Actor:
-System
+
+
 Preconditions:
-An order is Ready and has no courier
-No eligible idle courier exists
+
+
 Postconditions:
-The order is in the dispatch queue and visible to the operator
-When a courier becomes idle, the oldest queued order is offered using the dispatch rule
+
+
 Inputs:
-Ready order
-Courier statuses
+
+
 Outputs:
-Updated dispatch queue on the operator dashboard
-Delivery request, once a courier becomes idle
+
+
 Main Success Scenario:
-An order becomes Ready or returns to the queue, and no eligible courier is idle
-The system adds the order to the dispatch queue
-The operator sees the order in the queue
-A courier becomes idle by going on duty, completing a delivery or declining an offer
-The system takes the oldest queued order and applies the dispatch rule (UC-DLV-01)
 
 
 
 
-
-7- Reassign order (operator) Idriss
+7- Reassign order (system) Idriss
 ID:
-UC-DLV-07
+UC-DRV-07
 Title:
 Reassign order
 Description:
-An operator reassigns a stalled order, meaning an order whose courier accepted it and then went offline before pickup. An accepted order can only change courier by this command.
+
+
 Primary Actor:
-Platform Operator
+
+
 Preconditions:
-Operator is logged in
-The order is Ready and is stalled: its courier accepted it and is now Offline
+
+
 Postconditions:
-The order is no longer bound to the offline courier
-The order is offered to another courier using the dispatch rule, or waits in the dispatch queue
-The reassignment is recorded with an event id
+
+
 Inputs:
-Authenticated operator identity
-Stalled order
+
+
 Outputs:
-Updated order on the operator dashboard
-Delivery request to the new courier, if one is idle
-One output console line (DASH)
+
+
 Main Success Scenario:
-The operator sees an order marked as stalled
-The operator selects Reassign
-The system verifies the operator's role and that the order is stalled
-The system removes the offline courier from the order
-The system applies the dispatch rule (UC-DLV-01), or queues the order if no courier is idle (UC-DLV-06)
-The system records the event, updates the dashboard and logs the command
 
 
 
@@ -329,68 +288,28 @@ The system records the event, updates the dashboard and logs the command
 
 8- Track delivery (System) Idriss
 ID:
-UC-DLV-08
+UC-DRV-08
 Title:
 Track delivery
 Description:
-While an order is out for delivery, the system keeps the customer's view up to date with the order status and the courier's stored position on the map. Positions are stored values that change at the pickup and delivery handoffs; live GPS is out of scope.
+
+
 Primary Actor:
-System
+
+
 Preconditions:
-Customer is logged in and the order belongs to them
-A courier is Assigned to the order or Carrying it
+
+
 Postconditions:
-The customer's view shows the latest order status and courier position
-Order and courier records remain unchanged
+
+
 Inputs:
-Order id
-Order status
-Stored courier position and status
+
+
 Outputs:
-Order status timeline
-Courier marker on the map
+
+
 Main Success Scenario:
-The customer opens an active order
-The system verifies that the order belongs to the customer
-The system retrieves the order status and the stored position of its courier
-The system displays them on the order timeline and the map
-The system refreshes this information every few seconds until the order reaches a final state
-
-
-
-
-
-9- Go on/off duty (courier) Owner TBD
-ID:
-UC-DLV-09
-Title:
-Go on/off duty
-Description:
-A courier switches between Offline and on duty. Only on-duty idle couriers can receive orders, and a courier cannot go offline while carrying an order.
-Primary Actor:
-Courier
-Preconditions:
-Courier is logged in
-To go on duty: the courier is Offline
-To go off duty: the courier is Idle or Assigned, and is not Carrying
-Postconditions:
-Going on duty: the courier is Idle and the dispatch queue is retried (UC-DLV-06)
-Going off duty: the courier is Offline and no longer appears on the map
-Going off duty with an offer not yet accepted: the order returns to the dispatch queue
-Going off duty with an accepted order: the order becomes stalled (UC-DLV-07)
-Inputs:
-Authenticated courier identity
-Requested duty status
-Outputs:
-Updated courier status
-Updated map
-One output console line (DASH)
-Main Success Scenario:
-The courier selects Go on duty or Go off duty
-The system verifies that the change is allowed in the courier's current state
-The system updates the courier's status
-The system retries the dispatch queue or handles the courier's current order as described in the postconditions
-The system updates the map and logs the command
 
 
 
@@ -414,7 +333,7 @@ UC-PRC-01
 Title:
 Compute order fare
 Description:
-The total fixed fare of each order is calculated and saved in its billing record. At checkout, as part of Place Order, PRC computes totalFare = SUM(unit price × quantity) + deliveryFee + serviceFee + smallOrderSurcharge, where the surcharge applies only when the subtotal is below the smallOrderThreshold. All values other than the order lines must come from the configuration file. PRC will record this amount as the order’s billing record when the order is placed (the total amount that the customer pays).
+The total fixed fare of each order is calculated and recorded in the ledger. At checkout, as part of Place Order, PRC computes totalFare = SUM(unit price × quantity) + deliveryFee + serviceFee + smallOrderSurcharge, where the surcharge applies only when the subtotal is below the smallOrderThreshold. All values other than the order lines must come from the configuration file. PRC will record this amount as the order’s billing record when the order is placed (the total amount that the customer pays).
 
 
 Primary Actor:
@@ -435,12 +354,6 @@ Total itemized fare (subtotal, delivery fee, service fee, surcharge, total)
 One billing record
 One output console line (DASH)
 Main Success Scenario:
-The customer selects items and quantities from an open restaurant
-The system reads the pricing values from the configuration file
-The system computes the subtotal and applies the delivery fee, the service fee and, if the subtotal is below the threshold, the surcharge
-The system displays the itemized fare
-The customer places the order
-The system saves the billing record with the order and logs the command
 
 
 
@@ -451,12 +364,12 @@ The system saves the billing record with the order and logs the command
 
 
 
-2- Record order charge (Nadine)
+2- Record order fare (Nadine)
 
 ID:
 UC-PRC-02
 Title:
-Record Order Charge
+View order summary
 Description:
 When the order reaches a final state (Delivered | Rejected | Cancelled), PRC adds one ledger entry with that state, the order's timestamps and its total charge:
 if delivered → total billing amount
@@ -470,23 +383,15 @@ The order has a billing record
 ORD has moved the order to delivered, cancelled or rejected and recorded the transition with an event id
 The ledger has no entry for this order’s final state
 Postconditions:
-The ledger holds exactly one entry for this order's final state
-The billing record is unchanged
+
+
 Inputs:
-Order id
-Final state
-Order timestamps
-Billing record
+
+
 Outputs:
-One ledger entry
-One output console line (DASH)
+
+
 Main Success Scenario:
-ORD moves the order to a final state
-PRC checks that the ledger has no entry for that final state
-PRC reads the total from the billing record, without recomputing it
-PRC sets the charge to the total if the order was delivered, or to 0$ if it was cancelled or rejected
-PRC saves the ledger entry with the final state, timestamps and charge
-The system logs the entry to the output console
 
 
 
@@ -576,37 +481,33 @@ For refunded orders, the system displays the refund as a separate entry while pr
 
 
 
-5- Send Refund Order Request (delivered + courier stole or lost order) (Customer) Jerome
+5- Send Refund Order Request (delivered + non delivered) (Customer) Jerome
 
 ID:
 UC-PRC-05
 Title:
 Send Refund Order Request
 Description:
-A customer who is dissatisfied with a delivered order, or whose order was stolen or lost by the courier after pickup, sends a refund request. A system operator reviews it and then approves or declines it.
+In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
 Primary Actor:
 Customer
 Preconditions:
 Customer is logged in
-The order belongs to the customer
-Order has been delivered less than 1.5 hours ago, or the order is Picked Up and the courier stole or lost it
-The order has no pending refund request
+Customer issued an order
+Order has been delivered less than 1.5 hours ago or Courier has either lost or not delivered the order
 Postconditions:
 Order refund request is issued to system operator
-The order and ledger remain unchanged until the operator decides
 Inputs:
 Order Information
-Reason for refund (order has not been delivered, or unsatisfied with order)
+Reason for refund
 Proof to back refund case
 Outputs:
 Refund request
-One output console line (DASH)
 Main Success Scenario:
-The customer opens the order details and selects Request Refund
-The customer selects a reason and provides proof
-The system verifies that the order belongs to the customer and is eligible
-The system sends the refund request to the system operator
-The system confirms the request to the customer and logs the command
+The customer orders an order
+The courier is assigned the order
+The courier either loses the order or the customer is not satisfied with the order quality
+The customer issues a refund request highlighting the reason for the refund and proof for his case
 
 
 
@@ -626,34 +527,33 @@ UC-PRC-06
 Title:
 Accept Refund Order Request
 Description:
-A system operator reviews a pending refund request, finds it valid and approves it. The refund is recorded in the ledger as a separate entry and the original charge is left unchanged.
+In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
 Primary Actor:
 System Operator
 Preconditions:
-Customer issued a refund request and it is pending
+Customer issued a refund request
 System Operator is logged in
 System Operator received refund request
 Postconditions:
 Refund Request is approved
+Customer is refunded the amount he paid for
 The order is marked as refunded in the system
-The ledger holds a separate refund entry for the amount the customer paid, and the original charge is unchanged
-If the order was Picked Up (stolen or lost): the charge entry is recorded first, and the courier no longer holds the order and is set to Offline
+The refund payment is marked in the system
 The Restaurant is notified of the refund
 Inputs:
 Refund Request
 Order information, including customer, courier and restaurant and payment amount
 Outputs:
-Customer is refunded the money (simulated)
+Customer is refunded the money
 Order is marked as refunded
-Ledger shows the separate refund entry
-Restaurant is notified of the refund through a dashboard message
-One output console line (DASH)
+Billing and ledger are updated
+Restaurant is notified of the refund
 Main Success Scenario:
-The operator opens a pending refund request
-The operator reviews the reason, proof and order information
-After reviewing, the operator finds the refund request valid and accepts it
-The system moves the order to refunded and records the refund as a separate ledger entry
-The system notifies the customer and the restaurant, and logs the command
+The customer issues a refund request
+The operator reviews the refund request
+After reviewing, the operator believes the refund request as valid and accepts it
+The customer is refunded his money
+The order is marked as refunded, billing and ledgers are updated and the restaurant is notified of the refund
 
 
 
@@ -666,26 +566,25 @@ UC-PRC-07
 Title:
 Decline Refund Order Request
 Description:
-A system operator reviews a pending refund request, finds it invalid and declines it. The order and ledger do not change.
+In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
 Primary Actor:
 System Operator
 Preconditions:
-Customer issued a refund request and it is pending
+Customer issued a refund request
 System Operator is logged in
 System Operator received refund request
 Postconditions:
 Refund Request is declined
-The order and ledger remain unchanged
-Customer is notified that their refund request is denied
+Customer is notified that his refund request is denied
 Inputs:
 Refund Request
 Order information, including customer, courier and restaurant and payment amount
 Outputs:
-Notification: Customer is notified through a dashboard message that their refund request is denied
-One output console line (DASH)
+Notification: Customer is notified that his refund request is denied
 Main Success Scenario:
-The operator opens a pending refund request
-The operator reviews the reason, proof and order information
-After reviewing, the operator finds the refund request invalid and declines it
-The system marks the request as declined
-The system notifies the customer that their refund request is denied and logs the command
+The customer issues a refund request
+The operator reviews the refund request
+After reviewing, the operator believes the refund request as invalid and declines it
+Customer is notified that his refund request is denied
+
+
