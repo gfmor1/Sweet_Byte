@@ -89,7 +89,7 @@ public class Restaurant {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Restaurant other)) return false;
-        return restaurantId != null && restaurantId.equals(other.restaurantId);
+        return restaurantId != null && restaurantId.equals(other.getRestaurantId());
     }
 
     //It gives every object of the class the same “label” so Java can always find it in a set or map, 

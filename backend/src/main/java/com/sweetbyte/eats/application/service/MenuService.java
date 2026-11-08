@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.service;
 
+import java.math.BigDecimal;
+
 import com.sweetbyte.eats.application.model.User;
 
 import com.sweetbyte.eats.application.model.MenuItem;
@@ -16,9 +18,9 @@ public interface MenuService{
     MenuItem getMenuItemByID(Long menuItemID);
 
     //UC I - Manage Restaurant configuration
-    MenuItem addMenuItem(Long restaurantID, String name, Double price, User user);
+    MenuItem addMenuItem(Long restaurantID, String name, BigDecimal price, User user);
 
-    MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price, User user);
+    MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, BigDecimal price, User user);
 
     List<MenuItem> removeMenuItem(Long restaurantID, Long menuItemID, User user);
 

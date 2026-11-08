@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import com.sweetbyte.eats.application.enums.CourierStatus;
 import com.sweetbyte.eats.application.enums.Role;
+import com.sweetbyte.eats.application.exceptions.InvalidTransitionException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,9 +43,20 @@ public class Courier extends User {
     public double getLongitude()     { return longitude; }
 
     // ---- behaviour ----
-    // Only an idle courier can be given a new order.
+    // Only an idle (so on-duty, empty-handed) courier can be offered an order (R-DLV-02).
+    // Holding at most one order (R-DLV-03) follows: ASSIGNED/CARRYING are never offered.
     public boolean isAvailable() {
         return status == CourierStatus.IDLE;
+    }
+
+    public boolean isOnDuty() {
+        return status != CourierStatus.OFFLINE;
+    }
+
+    // Straight-line distance on the seeded lat/long grid, used by the dispatch rule.
+    // Deliberately not road or great-circle distance: routing is out of scope.
+    public double distanceTo(double latitude, double longitude) {
+        return Math.hypot(this.latitude - latitude, this.longitude - longitude);
     }
 
     // ---- lifecycle (no skipped transitions) ----
@@ -53,9 +65,20 @@ public class Courier extends User {
         transition(CourierStatus.OFFLINE, CourierStatus.IDLE);
     }
 
-    // Can't log off in the middle of a delivery.
-    public void goOffline() {
-        transition(CourierStatus.IDLE, CourierStatus.OFFLINE);
+    // Allowed from IDLE or ASSIGNED, never while CARRYING (R-DLV-03).
+    // Going offline while ASSIGNED leaves the order stalled: it keeps this courier
+    // until an operator reassigns it (R-DLV-02). Returns true in that case so the
+    // service can surface the stalled order.
+    public boolean goOffline() {
+        if (status == CourierStatus.IDLE) {
+            status = CourierStatus.OFFLINE;
+            return false;
+        }
+        if (status == CourierStatus.ASSIGNED) {
+            status = CourierStatus.OFFLINE;
+            return true;
+        }
+        throw new InvalidTransitionException("Courier", getUserId(), status, CourierStatus.OFFLINE);
     }
 
     // An order has been given to this courier.
@@ -73,12 +96,27 @@ public class Courier extends User {
         transition(CourierStatus.CARRYING, CourierStatus.IDLE);
     }
 
+    // Operator reassign of an order this courier holds but has not picked up.
+    // An offline courier stays offline; an assigned one becomes idle again.
+    public void releaseAssignment() {
+        if (status == CourierStatus.ASSIGNED) {
+            status = CourierStatus.IDLE;
+        } else if (status != CourierStatus.OFFLINE) {
+            throw new InvalidTransitionException("Courier", getUserId(), status, CourierStatus.IDLE);
+        }
+    }
+
+    // Reset: back to the seeded state.
+    public void resetTo(CourierStatus seededStatus, double latitude, double longitude) {
+        status = Objects.requireNonNull(seededStatus, "status is required");
+        updateLocation(latitude, longitude);
+    }
+
     //inforces a logic sequence of courier status
     private void transition(CourierStatus expected, CourierStatus next) {
         Objects.requireNonNull(next, "status is required");
         if (status != expected) {
-            throw new IllegalStateException(
-                    "Courier " + getUserId() + " cannot go from " + status + " to " + next);
+            throw new InvalidTransitionException("Courier", getUserId(), status, next);
         }
         status = next;
     }
