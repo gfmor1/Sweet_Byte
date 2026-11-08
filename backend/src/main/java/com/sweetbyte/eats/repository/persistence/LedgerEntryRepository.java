@@ -25,5 +25,5 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, UUID> 
 
     List<LedgerEntry> findByCourierIdOrderByRecordedAtAsc(Long courierId);       // courier
 
-    boolean existsbyOrderIdAndType(Long orderId, LedgerEntryType type);
+    boolean existsByOrderIdAndType(Long orderId, LedgerEntryType type);
 }
