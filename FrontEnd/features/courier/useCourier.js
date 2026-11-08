@@ -6,6 +6,7 @@ import {
   acceptOffer,
   confirmDelivery,
   confirmPickup,
+  declineOffer,
   getMe,
   getOffer,
   goOffDuty,
@@ -18,6 +19,7 @@ const COMMANDS = {
   "Go on duty": goOnDuty,
   "Go off duty": goOffDuty,
   "Accept offer": acceptOffer,
+  "Decline offer": declineOffer,
   "Confirm pickup": confirmPickup,
   "Confirm delivery": confirmDelivery,
 };
@@ -26,6 +28,7 @@ const SUCCESS_TEXT = {
   "Go on duty": "You are on duty.",
   "Go off duty": "You are off duty.",
   "Accept offer": "Offer accepted.",
+  "Decline offer": "Offer declined.",
   "Confirm pickup": "Pickup confirmed.",
   "Confirm delivery": "Delivery confirmed.",
 };

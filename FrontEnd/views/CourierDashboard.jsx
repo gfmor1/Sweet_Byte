@@ -13,7 +13,7 @@ export default function CourierDashboard({ user, onLog }) {
   const { courier, offer, loaded, busy, message, error, runCommand } = useCourier(onLog);
   const { setFocus } = useMapFocus();
 
-  // The courier's map shows only 3 points: me, the pickup restaurant and the drop-off.
+  // With an order, the courier's map focuses on 3 points: me, the pickup restaurant and the drop-off.
   const myLat = courier?.latitude;
   const myLng = courier?.longitude;
   const pLat = offer?.restaurantLatitude;
@@ -25,12 +25,15 @@ export default function CourierDashboard({ user, onLog }) {
   const hasOffer = Boolean(offer);
 
   useEffect(() => {
-    if (myLat === undefined || myLat === null) return;
+    if (!hasOffer || myLat === undefined || myLat === null) {
+      setFocus(null);
+      return;
+    }
     setFocus({
       route: {
         mine: { name: "You", latitude: myLat, longitude: myLng },
-        pickup: hasOffer ? { name: pickupName, latitude: pLat, longitude: pLng } : null,
-        dropoff: hasOffer ? { name: "Customer", latitude: dLat, longitude: dLng } : null,
+        pickup: { name: pickupName, latitude: pLat, longitude: pLng },
+        dropoff: { name: "Customer", latitude: dLat, longitude: dLng },
         stage: pickedUp ? "toDropoff" : "toPickup",
       },
     });

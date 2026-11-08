@@ -147,6 +147,8 @@ export default function CityMap({
   userPin = null,
   // Click-to-place mode: { kind: "you" | "restaurant", label, point?, onPick(lat, lng) }.
   picker = null,
+  // Button switching between a focused view and the whole city: { label, onClick }.
+  viewToggle = null,
 }) {
   const routePoints = useMemo(() => {
     if (!route) return null;
@@ -231,6 +233,16 @@ export default function CityMap({
   return (
     <div className="city-map-wrapper">
       <div className="city-map" style={{ ...sizeStyle, position: "relative" }}>
+        {viewToggle && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={viewToggle.onClick}
+            style={{ position: "absolute", top: 12, right: 12, zIndex: 1000 }}
+          >
+            {viewToggle.label}
+          </button>
+        )}
         {picker && (
           <p
             role="status"

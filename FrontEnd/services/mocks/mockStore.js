@@ -212,6 +212,21 @@ export const courierAcceptOffer = () =>
     return courierView(courier);
   });
 
+export const courierDeclineOffer = () =>
+  respond(() => {
+    const courier = findCourier(actingCourierId);
+    if (courier.status !== "ASSIGNED") fail("There is no offer to decline.");
+    const order = findOrder(courier.currentOrderId);
+    if (order.offerAccepted) fail("An accepted offer cannot be declined.");
+    order.courierId = null;
+    state.dispatchQueue.unshift(order.id);
+    courier.status = "IDLE";
+    courier.currentOrderId = null;
+    // Other couriers first; the order waits in the queue if this was the only idle one.
+    dispatch(courier.id);
+    return courierView(courier);
+  });
+
 export const courierConfirmPickup = () =>
   respond(() => {
     const courier = findCourier(actingCourierId);

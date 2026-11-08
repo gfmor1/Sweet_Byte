@@ -12,16 +12,9 @@ import { useConsole } from "./ConsoleContext";
 import { getCouriers, getMapRestaurants } from "../services/dispatchApi";
 import { getRestaurants } from "../services/restaurantApi";
 import { applyRestaurantOverrides } from "../services/locationOverrides";
-import { getMe as getCourierMe } from "../services/courierApi";
 import { formatEnum } from "../services/enumApi";
 
 const MAP_REFRESH_MS = 5000;
-
-function loadCouriers(user) {
-  if (user.role === "OPERATOR") return getCouriers();
-  if (user.role === "COURIER") return getCourierMe().then((courier) => [courier]);
-  return Promise.resolve([]);
-}
 
 function renderDashboard(user, onLog) {
   switch (user.role) {
@@ -51,7 +44,7 @@ function AppShellContent({ user, onLogout }) {
     const usesRealRestaurants = user.role === "CUSTOMER" || user.role === "RESTAURANT_OWNER";
     const [restaurantResult, courierResult] = await Promise.allSettled([
       usesRealRestaurants ? getRestaurants() : getMapRestaurants(),
-      loadCouriers(user),
+      getCouriers(),
     ]);
 
     // Log each failure once, not on every poll.
@@ -66,12 +59,7 @@ function AppShellContent({ user, onLogout }) {
     }
 
     const restaurantList = restaurantResult.status === "fulfilled" ? restaurantResult.value : [];
-    const located = applyRestaurantOverrides(restaurantList);
-    setRestaurants(
-      user.role === "RESTAURANT_OWNER" && user.restaurantId
-        ? located.filter((r) => String(r.id) === String(user.restaurantId))
-        : located
-    );
+    setRestaurants(applyRestaurantOverrides(restaurantList));
     setCouriers(courierResult.status === "fulfilled" ? courierResult.value : []);
   }, [user, log]);
 
@@ -92,15 +80,27 @@ function AppShellContent({ user, onLogout }) {
   );
 
   const { focus, extras } = useMapFocus();
+  const [wholeCity, setWholeCity] = useState(false);
   // focus.restaurantIds (one or several) or the older single focus.restaurantId.
   const focusIds = focus?.restaurantIds
     ? focus.restaurantIds
     : focus?.restaurantId !== undefined && focus?.restaurantId !== null
     ? [focus.restaurantId]
     : null;
-  const focused = focusIds !== null;
+  const filteredIds = extras.visibleRestaurantIds;
+  // R-DASH-02: the map shows the whole city unless a dashboard narrowed it; the user can override that.
+  const narrowed =
+    focusIds !== null ||
+    Boolean(focus?.route) ||
+    (Boolean(filteredIds) && filteredIds.length < restaurants.length);
+
+  useEffect(() => {
+    if (!narrowed) setWholeCity(false);
+  }, [narrowed]);
+
+  const focused = focusIds !== null && !wholeCity;
   const focusKey = focusIds ? focusIds.map(String).join(",") : "";
-  const visibleIds = extras.visibleRestaurantIds;
+  const visibleIds = wholeCity ? null : filteredIds;
 
   const mapRestaurants = useMemo(() => {
     if (focused) {
@@ -121,7 +121,13 @@ function AppShellContent({ user, onLogout }) {
     [focused, focus, couriers]
   );
 
-  const route = focus?.route ?? null;
+  const route = wholeCity ? null : focus?.route ?? null;
+  const viewToggle = narrowed
+    ? {
+        label: wholeCity ? "Show focused view" : "Show whole city",
+        onClick: () => setWholeCity((previous) => !previous),
+      }
+    : null;
 
   return (
     <>
@@ -140,6 +146,8 @@ function AppShellContent({ user, onLogout }) {
             restaurants={mapRestaurants}
             couriers={mapCouriers}
             route={route}
+            highlightRestaurantId={user.restaurantId}
+            viewToggle={viewToggle}
             userPin={extras.userPin}
             picker={extras.picker}
           />

@@ -27,6 +27,12 @@ export function acceptOffer() {
     : apiRequest("/api/courier/offer/accept", { method: "POST" });
 }
 
+export function declineOffer() {
+  return useMocks
+    ? mockStore.courierDeclineOffer()
+    : apiRequest("/api/courier/offer/decline", { method: "POST" });
+}
+
 export function confirmPickup() {
   return useMocks
     ? mockStore.courierConfirmPickup()
