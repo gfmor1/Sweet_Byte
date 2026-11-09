@@ -3,6 +3,7 @@ package com.sweetbyte.eats.repository.persistence;
 import java.util.List;
 import java.util.Optional;
 
+import com.sweetbyte.eats.application.enums.CourierStatus;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +29,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     public List<Order> findByRestaurantRestaurantIdAndStatusOrderByArrivalSeqAsc(Long restaurantId, OrderStatus status);
 
     public Long countByRestaurantRestaurantIdAndStatus(Long restaurantId, OrderStatus status);
+
+    public Optional<Order> findFirstByCourierUserIdAndStatusIn(Long userId, List<OrderStatus> held);
+
+    public List<Order> findByStatusAndCourierIsNullOrderByReadyAtAscArrivalSeqAsc(OrderStatus status);
+
+    public List<Order> findByStatusAndCourier_Status(OrderStatus ready, CourierStatus offline);
 }
