@@ -102,6 +102,11 @@ function readMockUser() {
   }
 }
 
+// Role of the local mock session (courier/operator), or null for a real Supabase session
+export function mockSessionRole() {
+  return readMockUser()?.role ?? null;
+}
+
 // Returning user: Supabase checks the password, then we load the SweetByte profile
 export async function login(email, password) {
   const mockAccount = useMocks ? MOCK_ACCOUNTS[email.trim().toLowerCase()] : null;

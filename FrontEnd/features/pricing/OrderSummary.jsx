@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import {
-  getOrderSummary,
-  pricingEnabled,
-} from "../../services/pricingApi";
+import { getOrderSummary } from "../../services/pricingApi";
 
 import FareBreakdown from "./FareBreakdown";
 
@@ -22,8 +19,6 @@ export default function OrderSummary({ orderId, onLog }) {
   }, [onLog]);
 
   useEffect(() => {
-    if (!pricingEnabled) return;
-
     let active = true;
 
     setSummary(null);
@@ -66,17 +61,6 @@ export default function OrderSummary({ orderId, onLog }) {
       active = false;
     };
   }, [orderId, attempt]);
-
-  if (!pricingEnabled) {
-    return (
-      <p>
-        Itemized pricing for this order is not available yet: the pricing
-        service is not connected. Turn on mock mode
-        (NEXT_PUBLIC_USE_MOCKS=true) or wait for the backend pricing
-        endpoints.
-      </p>
-    );
-  }
 
   if (loading) {
     return <p role="status">Loading order summary...</p>;

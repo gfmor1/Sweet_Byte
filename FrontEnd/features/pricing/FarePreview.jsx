@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { getPricingConfig, previewFare } from "../../services/pricingApi";
+import { getPricingConfig } from "../../services/pricingApi";
 import { calculateFare } from "../../services/config";
 
 import FareBreakdown from "./FareBreakdown";
 
 // Fare preview for a cart subtotal. Fee values come from the pricing config
-// (GET /api/pricing/config); previewFare's defaults are only a fallback.
+// (GET /api/pricing/config), never from values written in the code.
 export default function FarePreview({ subtotal, onLog }) {
   const [config, setConfig] = useState(null);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState("");
 
   const logCallback = useRef(onLog);
 
@@ -35,7 +35,7 @@ export default function FarePreview({ subtotal, onLog }) {
       })
       .catch((err) => {
         if (!active) return;
-        setUsingFallback(true);
+        setError(err.message);
         logCallback.current?.({
           command: "Load pricing config",
           error: err.message,
@@ -47,13 +47,15 @@ export default function FarePreview({ subtotal, onLog }) {
     };
   }, []);
 
-  if (!config && !usingFallback) {
+  if (error) {
+    return <p role="alert">Fare preview unavailable: {error}</p>;
+  }
+
+  if (!config) {
     return <p role="status">Loading pricing...</p>;
   }
 
-  const fare = config
-    ? calculateFare(subtotal, config)
-    : previewFare(subtotal);
+  const fare = calculateFare(subtotal, config);
 
   return (
     <section aria-label="Fare preview" style={{ margin: "0.75rem 0" }}>
@@ -65,13 +67,6 @@ export default function FarePreview({ subtotal, onLog }) {
         <FareBreakdown fare={fare} />
       ) : (
         <p>Add items to see the fare breakdown.</p>
-      )}
-
-      {usingFallback && subtotal > 0 && (
-        <p style={{ fontSize: "0.85rem" }}>
-          Estimate based on default pricing; the final fare is confirmed
-          when the order is placed.
-        </p>
       )}
     </section>
   );

@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { useMocks } from "./config";
 import * as mockStore from "./mocks/mockStore";
+import { toLedgerEntry } from "./pricingApi";
 
 export const operatorEnabled =
   useMocks || process.env.NEXT_PUBLIC_ENABLE_OPERATOR === "true";
@@ -37,15 +38,16 @@ export async function reassignOrder(orderId) {
 export async function refundOrder(orderId) {
   if (useMocks) return mockStore.refundOrder(orderId);
   return apiRequest(
-    `/api/operator/orders/${encodeURIComponent(orderId)}/refund`,
-    { method: "POST" }
+    `/api/orders/${encodeURIComponent(orderId)}/refund`,
+    { method: "POST", body: { reason: "Operator refund" } }
   );
 }
 
 // All ledger entries; refunds are separate REFUND entries, charges are never edited
 export async function getLedger() {
   if (useMocks) return mockStore.getLedger();
-  return apiRequest("/api/ledger");
+  const entries = await apiRequest("/api/ledger");
+  return entries.map(toLedgerEntry);
 }
 
 export async function resetSystem() {

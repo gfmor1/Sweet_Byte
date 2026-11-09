@@ -1,45 +1,48 @@
 import { apiRequest } from "./apiClient";
-import { useMocks, PRICING_CONFIG, calculateFare } from "./config";
+import { mockSessionRole } from "./authApi";
 import * as mockStore from "./mocks/mockStore";
 
-export const pricingEnabled =
-  useMocks || process.env.NEXT_PUBLIC_ENABLE_PRC === "true";
+// Mock data only serves the mock courier/operator sessions: customers and owners use real orders.
+
+export function toLedgerEntry(entry) {
+  return {
+    entryId: entry.id,
+    orderId: entry.orderId,
+    type: entry.type,
+    finalState: entry.finalStatus,
+    recordedAt: entry.recordedAt,
+    amount: entry.amount,
+  };
+}
 
 export async function getOrderSummary(orderId) {
-  if (useMocks) return mockStore.getOrderSummary(orderId);
+  if (mockSessionRole()) return mockStore.getOrderSummary(orderId);
 
-  if (!pricingEnabled) {
-    throw new Error("Pricing integration is not enabled yet.");
-  }
-
-  return apiRequest(
-    `/api/pricing/orders/${encodeURIComponent(orderId)}/summary`
-  );
+  const summary = await apiRequest(`/api/orders/${encodeURIComponent(orderId)}/summary`);
+  return {
+    orderId: summary.orderId,
+    status: summary.status,
+    deliveredAt: summary.timestamps?.DELIVERED,
+    fare: summary.fare,
+  };
 }
 
 export async function getHistory() {
-  if (useMocks) return mockStore.getHistory();
+  const role = mockSessionRole();
+  if (role) return mockStore.getHistory(role);
 
-  if (!pricingEnabled) {
-    throw new Error("Pricing integration is not enabled yet.");
-  }
-
-  // The backend must scope results using the authenticated session.
-  return apiRequest("/api/pricing/history");
+  // The backend scopes results using the authenticated session.
+  const entries = await apiRequest("/api/ledger");
+  return entries.map(toLedgerEntry);
 }
 
 // Fare of an existing order
 export async function getFare(orderId) {
-  if (useMocks) return mockStore.getOrderFare(orderId);
+  if (mockSessionRole()) return mockStore.getOrderFare(orderId);
   return apiRequest(`/api/orders/${encodeURIComponent(orderId)}/fare`);
 }
 
 export async function getPricingConfig() {
-  if (useMocks) return mockStore.getPricingConfig();
+  if (mockSessionRole()) return mockStore.getPricingConfig();
   return apiRequest("/api/pricing/config");
-}
-
-// Client-side preview of the fare for a cart subtotal (same formula as the backend)
-export function previewFare(subtotal) {
-  return calculateFare(subtotal, PRICING_CONFIG);
 }
