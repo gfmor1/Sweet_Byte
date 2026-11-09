@@ -2,42 +2,45 @@
 
 On the logic to assigning ready orders to couriers:
 
-Shortest straight line distance to restaurant (tie breaker is smaller courier id)
+Shortest straight line distance from courier to restaurant, among idle on-duty couriers (tie breaker is smaller courier id)
 
 This implies a couple things:
 
-1- Every courier should have a current location in terms of  Longitude and Latitude :
-Backend: (make sure this exists in our model so we can send it)
-Frontend: We should track it in our frontend and there are 2 ways to do it: Either continuously track it live or on every ready order the system pings every courier for their location and based off of that request the system can know whos closest
+1- Every courier should have a current location in terms of Longitude and Latitude:
+Backend: already in the Courier model. Positions are stored values: they start from the seed file and change at pickup (restaurant position) and delivery (drop-off position). Live GPS is out of scope.
+Couriers who register themselves also need a starting position (the Courier constructor requires one), so the config should define a default.
+Frontend: reads the stored positions from the backend and polls for updates.
 2-Every restaurant should have a fixed location in terms of Longitude and Latitude:
-Backend: we should add that to our models and make sure the address is converted to longitude and latitude
+Backend: coordinates need to be inferred from the restaurant location (address converted to longitude and latitude).
 
 
 
 The flow would be
 
-order is marked ready --> system pings all available couriers for their location --> system assigns delivery request to courier based off rule (closest straight line ....) --> courier can either accept or decline --> if no courier is available order goes to a queue
+order is marked ready --> system reads the stored location of all idle couriers --> system offers delivery to one courier based off rule (closest straight line ....) --> courier can either accept or decline --> if declined or if no courier is available, order goes to the queue
 
 Regarding Reassignment:
 
-DRV-7 Reassign order (system) : only for couriers whos status went offline
+DRV-7 Reassign order (operator): only for orders whose courier accepted and then went offline before pickup. Reassignment only happens by operator command (R-DLV-02).
+A courier cannot go offline while carrying (R-DLV-03). An offer that was not yet accepted goes back to the queue when the courier goes off duty, it does not need reassigning.
 
-Track delivery :
-DRV-8, delivery is tracked by constantly pinging longitude and latitude of courier who is either assigned (on their way to the restaurant) or carrying (from restaurant to customer)
+Track delivery:
+DRV-8, delivery is tracked by polling the order status and the stored longitude and latitude of the courier who is either assigned (on their way to the restaurant) or carrying (from restaurant to customer)
 Maps and locations:
 
-All location and map related stuff would be managed through longitude and latitude. Ie we should make sure that every model (or object) which its location should be tracked has a longitude and latitude attributes and methods to get them
-  this would be a good place to implement a design pattern:
+All location and map related stuff would be managed through longitude and latitude. Ie every model (or object) whose location should be tracked has a location with longitude and latitude and methods to get them
 
-Decorator, or a similar one, we create a Trackable class or a Location class with attributes (longitude or latittude) and methods and deocrate every class who uses it
+Design pattern: a shared Location value object (latitude, longitude, validation, distanceTo) used by Courier, Customer and Restaurant through composition. Today latitude and longitude are duplicated on each model.
+Decorator is already used where it fits: fare calculation (DeliveryFeeDecorator, ServiceFeeDecorator, SmallOrderSurchargeDecorator).
 
 
 
 Queues:
 
-order queues are first in first out general queues for all orders across all restaurants
-So if an order doesn't have an available courier it doesnt get silenced
-One queue for all unassigned orders
+Dispatch queue: first in first out, one general queue for all ready orders across all restaurants that have no courier
+So if an order doesn't have an available courier it doesnt get silenced. It is retried whenever a courier becomes idle (R-DLV-04)
+A declined order goes back to the front of the queue and other idle couriers are tried first
+Not to be confused with the preparation queue, which is per restaurant (R-ORD-03)
 
 
 
@@ -45,11 +48,13 @@ Refunds:
 
 Every order details has a request refund with two subcategories or reasons:
 
-1- Order has not been delivered
-2- Unsatisfied with order
+1- Order has not been delivered (courier stole or lost the order after pickup)
+2- Unsatisfied with order (delivered less than 1.5 hours ago)
 
-Frontend: Every order details has an request refund button with a form
+Frontend: Every eligible order details has a request refund button with a form
 Backend: Every refund request has to be reviewed and verified by a system operator
+
+Deviation from the spec to confirm with the lab demonstrator: R-PRC-05 only allows refunded from delivered. Reason 1 adds picked_up --> refunded, which also needs a backend change (Order.refund() currently rejects it).
 
 
 
