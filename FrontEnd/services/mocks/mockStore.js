@@ -1,4 +1,5 @@
 import { PRICING_CONFIG, calculateFare } from "../config";
+import { explain } from "../permissions";
 import { createSeed } from "./mockData";
 
 // In-memory simulation of the backend rules. Every public function returns a Promise
@@ -347,3 +348,69 @@ export const getHistory = (role) =>
       )
     )
   );
+
+// --- Refund requests ---
+
+const findRefund = (id) => find(state.refundRequests, id, "Refund request");
+
+function refundView(request) {
+  return { ...request, orderStatus: findOrder(request.orderId).status };
+}
+
+export const getRefundableOrders = () =>
+  respond(() => copy(state.orders.filter((o) => ["PICKED_UP", "DELIVERED"].includes(o.status))));
+
+export const getRefundRequests = () => respond(() => state.refundRequests.map(refundView));
+
+export const submitRefundRequest = ({ orderId, reason, proof }) =>
+  respond(() => {
+    const order = findOrder(orderId);
+    if (!proof) fail("Proof is required.", 400);
+    const reasonBlocked = explain("CUSTOMER", "requestRefund", {
+      orderStatus: order.status,
+      deliveredAt: order.deliveredAt,
+      refundReason: reason,
+      hasPendingRequest: state.refundRequests.some(
+        (r) => r.orderId === order.id && r.status === "PENDING"
+      ),
+    });
+    if (reasonBlocked) fail(reasonBlocked);
+    const request = {
+      id: state.nextRefundId++,
+      orderId: order.id,
+      restaurantId: order.restaurantId,
+      restaurantName: order.restaurantName,
+      reason,
+      proof,
+      status: "PENDING",
+    };
+    state.refundRequests.push(request);
+    return refundView(request);
+  });
+
+export const acceptRefundRequest = (requestId) =>
+  respond(() => {
+    const request = findRefund(requestId);
+    if (request.status !== "PENDING") fail("This request was already decided.");
+    const order = findOrder(request.orderId);
+    if (!["DELIVERED", "PICKED_UP"].includes(order.status)) fail("This order can no longer be refunded.");
+    if (order.status === "PICKED_UP") {
+      // Stolen or lost: the order never got a charge entry, and the courier no longer holds it.
+      addLedgerEntry(order, "CHARGE", "PICKED_UP");
+      const courier = findCourier(order.courierId);
+      courier.status = "OFFLINE";
+      courier.currentOrderId = null;
+    }
+    order.status = "REFUNDED";
+    addLedgerEntry(order, "REFUND", "REFUNDED");
+    request.status = "ACCEPTED";
+    return refundView(request);
+  });
+
+export const declineRefundRequest = (requestId) =>
+  respond(() => {
+    const request = findRefund(requestId);
+    if (request.status !== "PENDING") fail("This request was already decided.");
+    request.status = "DECLINED";
+    return refundView(request);
+  });

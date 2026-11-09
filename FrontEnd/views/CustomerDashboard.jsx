@@ -18,6 +18,7 @@ import ActiveOrdersBar from "../features/customer/ActiveOrdersBar";
 import { courierMarker } from "../features/customer/normalizeCourier";
 import OrderHistory from "../features/pricing/OrderHistory";
 import OrderSummary from "../features/pricing/OrderSummary";
+import RefundPanel from "../features/refunds/RefundPanel";
 import styles from "../features/customer/customer.module.css";
 
 import {
@@ -699,6 +700,7 @@ export default function CustomerDashboard({ user, onLog }) {
             content: ordersContent,
           },
           { id: "history", label: "History", content: historyContent },
+          { id: "refunds", label: "Refunds", content: <RefundPanel onLog={onLog} /> },
         ]}
       />
 

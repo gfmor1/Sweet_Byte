@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getOperatorDashboard, getLedger } from "../../services/operatorApi";
 import { getCouriers, getDispatchQueue } from "../../services/dispatchApi";
+import { getRefundRequests } from "../../services/refundApi";
 
 export const POLL_MS = 5000;
 
@@ -13,6 +14,7 @@ const EMPTY = {
   couriers: [],
   queue: [],
   ledger: [],
+  refunds: [],
 };
 
 // Loads everything the operator dashboard shows. No overlapping requests,
@@ -56,12 +58,13 @@ export default function useOperatorData({ active, onLog, paused }) {
       getCouriers(),
       getDispatchQueue(),
       getLedger(),
+      getRefundRequests(),
     ]);
 
     inFlight.current = false;
 
     if (mounted.current && mine === version.current) {
-      const [dash, couriers, queue, ledger] = results;
+      const [dash, couriers, queue, ledger, refunds] = results;
       const errors = [];
       const next = {};
 
@@ -81,6 +84,7 @@ export default function useOperatorData({ active, onLog, paused }) {
         ["couriers", couriers, "couriers"],
         ["queue", queue, "dispatch queue"],
         ["ledger", ledger, "ledger"],
+        ["refunds", refunds, "refund requests"],
       ]) {
         if (res.status === "fulfilled" && Array.isArray(res.value)) {
           next[key] = res.value;

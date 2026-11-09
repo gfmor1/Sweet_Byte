@@ -24,3 +24,11 @@ export function calculateFare(subtotal, config = PRICING_CONFIG) {
     currency: config.currency,
   };
 }
+
+// A delivered order can be the subject of a refund request for this long (UC-PRC-05).
+export const REFUND_WINDOW_MS = 90 * 60 * 1000;
+
+export const REFUND_REASONS = {
+  NOT_DELIVERED: "Order has not been delivered",
+  UNSATISFIED: "Unsatisfied with order",
+};

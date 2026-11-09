@@ -78,6 +78,7 @@ export function createSeed() {
     couriers,
     orders,
     dispatchQueue: [15],
+    refundRequests: [],
     ledger: [
       {
         entryId: 1,
@@ -91,5 +92,6 @@ export function createSeed() {
     ],
     nextOrderId: 16,
     nextLedgerId: 2,
+    nextRefundId: 1,
   };
 }

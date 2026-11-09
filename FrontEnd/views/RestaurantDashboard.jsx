@@ -8,6 +8,7 @@ import ManageMenu from "../features/restaurant/ManageMenu";
 import RestaurantSettings from "../features/restaurant/RestaurantSettings";
 import QueueBadge from "../features/shared/QueueBadge";
 import OrderHistory from "../features/pricing/OrderHistory";
+import RefundNotices from "../features/refunds/RefundNotices";
 import Tabs from "../components/Tabs";
 import styles from "../features/restaurant/restaurant.module.css";
 import { getEnums, formatEnum } from "../services/enumApi";
@@ -381,6 +382,7 @@ function RestaurantDashboard({ restaurantId, onLog }) {
             content: (
               <div className={styles.stack}>
                 <OrderHistory onLog={onLog} />
+                <RefundNotices onLog={onLog} />
               </div>
             )
           },

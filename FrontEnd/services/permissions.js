@@ -1,6 +1,9 @@
 // Single source of truth for "who may do what, and when" (R-DASH-04/05).
 // ctx fields used (all optional unless a rule needs them):
-//   restaurantStatus, cartSize, orderStatus, courierStatus, offerAccepted, stalled
+//   restaurantStatus, cartSize, orderStatus, courierStatus, offerAccepted, stalled,
+//   deliveredAt, refundReason, hasPendingRequest, requestStatus
+
+import { REFUND_WINDOW_MS } from "./config";
 
 export const ROLES = {
   CUSTOMER: "CUSTOMER",
@@ -26,6 +29,21 @@ const RULES = {
   cancelOrder: {
     roles: [CUSTOMER],
     check: (ctx) => (ctx.orderStatus !== "PLACED" ? "Only a placed order can be cancelled." : null),
+  },
+  // NOT_DELIVERED covers a courier who stole or lost the order after pickup.
+  requestRefund: {
+    roles: [CUSTOMER],
+    check: (ctx) => {
+      if (ctx.hasPendingRequest) return "A refund request is already pending for this order.";
+      if (ctx.orderStatus === "PICKED_UP") {
+        return ctx.refundReason === "UNSATISFIED" ? "This order has not been delivered yet." : null;
+      }
+      if (ctx.orderStatus !== "DELIVERED") return "This order is not eligible for a refund.";
+      if (ctx.refundReason === "NOT_DELIVERED") return "This order was marked as delivered.";
+      return Date.now() - Date.parse(ctx.deliveredAt) < REFUND_WINDOW_MS
+        ? null
+        : "The 1.5 hour refund window has passed.";
+    },
   },
 
   acceptOrder: {
@@ -108,6 +126,14 @@ const RULES = {
   refundOrder: {
     roles: [OPERATOR],
     check: (ctx) => (ctx.orderStatus !== "DELIVERED" ? "Only delivered orders can be refunded." : null),
+  },
+  acceptRefund: {
+    roles: [OPERATOR],
+    check: (ctx) => (ctx.requestStatus !== "PENDING" ? "This request was already decided." : null),
+  },
+  declineRefund: {
+    roles: [OPERATOR],
+    check: (ctx) => (ctx.requestStatus !== "PENDING" ? "This request was already decided." : null),
   },
   reset: { roles: [OPERATOR] },
   viewAllOrders: { roles: [OPERATOR] },

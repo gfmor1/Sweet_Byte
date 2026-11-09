@@ -10,6 +10,7 @@ import {
   refundOrder,
   resetSystem,
 } from "../services/operatorApi";
+import { acceptRefundRequest, declineRefundRequest } from "../services/refundApi";
 
 import useOperatorData from "../features/operator/useOperatorData";
 import Tabs from "../components/Tabs";
@@ -18,6 +19,7 @@ import CouriersTable from "../features/operator/CouriersTable";
 import DispatchQueue from "../features/operator/DispatchQueue";
 import OrdersPanel from "../features/operator/OrdersPanel";
 import LedgerTable from "../features/operator/LedgerTable";
+import RefundReviewPanel from "../features/operator/RefundReviewPanel";
 import styles from "../features/operator/operator.module.css";
 
 export default function OperatorDashboard({ user, onLog }) {
@@ -93,6 +95,7 @@ export default function OperatorDashboard({ user, onLog }) {
 
   const disabled = busy;
   const stalledCount = data.orders.filter((o) => o.canReassign === true).length;
+  const pendingRefunds = data.refunds.filter((r) => r.status === "PENDING").length;
 
   const tabs = [
     {
@@ -151,6 +154,32 @@ export default function OperatorDashboard({ user, onLog }) {
           <CouriersTable couriers={data.couriers} loaded={data.loaded} />
           <DispatchQueue queue={data.queue} loaded={data.loaded} />
         </div>
+      ),
+    },
+    {
+      id: "refunds",
+      label: "Refunds",
+      badge: pendingRefunds > 0 ? pendingRefunds : undefined,
+      content: (
+        <RefundReviewPanel
+          requests={data.refunds}
+          loaded={data.loaded}
+          disabled={disabled}
+          onAccept={(r) =>
+            runCommand(
+              `Accept refund request #${r.id}`,
+              () => acceptRefundRequest(r.id),
+              `Order #${r.orderId} refunded.`
+            )
+          }
+          onDecline={(r) =>
+            runCommand(
+              `Decline refund request #${r.id}`,
+              () => declineRefundRequest(r.id),
+              `Refund request for order #${r.orderId} declined.`
+            )
+          }
+        />
       ),
     },
     {
