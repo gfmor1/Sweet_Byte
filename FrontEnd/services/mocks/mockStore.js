@@ -48,15 +48,9 @@ function isStalled(order) {
   );
 }
 
+// Straight-line distance on the coordinate grid, same as the backend's Courier.distanceTo.
 function distance(a, b) {
-  const R = 6371;
-  const rad = (deg) => (deg * Math.PI) / 180;
-  const dLat = rad(b.latitude - a.latitude);
-  const dLng = rad(b.longitude - a.longitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
+  return Math.hypot(a.latitude - b.latitude, a.longitude - b.longitude);
 }
 
 // Nearest IDLE courier by straight-line distance, ties to the lowest id; one order per courier.

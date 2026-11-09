@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
-  operatorEnabled,
   pauseRestaurant,
   reopenRestaurant,
   reassignOrder,
@@ -24,7 +23,7 @@ import styles from "../features/operator/operator.module.css";
 
 export default function OperatorDashboard({ user, onLog }) {
   const isOperator = user?.role === "OPERATOR";
-  const active = operatorEnabled && isOperator;
+  const active = isOperator;
 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -79,18 +78,6 @@ export default function OperatorDashboard({ user, onLog }) {
 
   if (!isOperator) {
     return <p role="alert">An operator account is required to access this dashboard.</p>;
-  }
-
-  if (!operatorEnabled) {
-    return (
-      <div className="dashboard">
-        <h2>Operator Dashboard</h2>
-        <p>
-          Operator integration is not enabled yet. The operator backend endpoints must be
-          connected first.
-        </p>
-      </div>
-    );
   }
 
   const disabled = busy;

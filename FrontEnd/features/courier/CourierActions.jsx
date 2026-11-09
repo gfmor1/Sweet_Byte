@@ -15,7 +15,7 @@ export default function CourierActions({ courier, offer, busy, onCommand }) {
   };
 
   // Accept and Decline are only shown when an unaccepted order is offered.
-  const showOfferChoice = status === "ASSIGNED" && offer && offer.accepted !== true;
+  const showOfferChoice = offer && offer.accepted !== true;
 
   function button(command, label, handler, primary = false) {
     const allowed = can(ROLE, command, ctx) && !busy;

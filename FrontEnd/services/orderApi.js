@@ -22,6 +22,11 @@ function toOrder(order) {
     readyAt: order.readyAt,
     deliveredAt: order.deliveredAt,
     reason: order.reason,
+    courierId: order.courierId,
+    courierName: order.courierName,
+    courierStatus: order.courierStatus,
+    courierLatitude: order.courierLatitude,
+    courierLongitude: order.courierLongitude,
   };
 }
 

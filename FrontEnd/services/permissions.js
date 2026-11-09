@@ -89,16 +89,12 @@ const RULES = {
   acceptOffer: {
     roles: [COURIER],
     check: (ctx) =>
-      ctx.courierStatus !== "ASSIGNED" || ctx.offerAccepted === true
-        ? "There is no pending offer to accept."
-        : null,
+      ctx.offerAccepted !== false ? "There is no pending offer to accept." : null,
   },
   declineOffer: {
     roles: [COURIER],
     check: (ctx) =>
-      ctx.courierStatus !== "ASSIGNED" || ctx.offerAccepted === true
-        ? "There is no pending offer to decline."
-        : null,
+      ctx.offerAccepted !== false ? "There is no pending offer to decline." : null,
   },
   confirmPickup: {
     roles: [COURIER],

@@ -13,6 +13,7 @@ import java.util.Objects;
 
 import org.hibernate.annotations.Generated;
 
+import com.sweetbyte.eats.application.enums.CourierStatus;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.exceptions.InvalidTransitionException;
 
@@ -202,6 +203,11 @@ public class Order {
     public void refund() {
         transition(OrderStatus.DELIVERED, OrderStatus.REFUNDED);
         refundedAt = Instant.now();
+    }
+
+    // Stalled: its courier accepted it, then went offline before pickup (R-DLV-02).
+    public boolean isStalled() {
+        return status == OrderStatus.READY && courier != null && courier.getStatus() == CourierStatus.OFFLINE;
     }
 
     private void requireAssignedTo(Courier by) {

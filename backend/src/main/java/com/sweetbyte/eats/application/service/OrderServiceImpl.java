@@ -1,6 +1,7 @@
 package com.sweetbyte.eats.application.service;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
@@ -24,12 +25,18 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
+    private final ApplicationEventPublisher events;
+    private final PricingService pricingService;
 
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
         MenuItemRepository menuItemRepository,
         EventService eventService,
-        OrderPermissionResolver permissionResolver) {
+        OrderPermissionResolver permissionResolver,
+        ApplicationEventPublisher events,
+        PricingService pricingService) {
+        this.events = events;
+        this.pricingService = pricingService;
         this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
@@ -54,6 +61,7 @@ public class OrderServiceImpl implements OrderService {
             order.addLine(menuItem, quantity);
         });
         Order saved = orderRepository.save(order);
+        pricingService.recordFare(saved);
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
         return saved;
     }
@@ -120,6 +128,7 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
+        if (saved.getStatus() == OrderStatus.READY) events.publishEvent(new OrderReadyEvent(saved.getOrderId()));
         return saved;
     }
 

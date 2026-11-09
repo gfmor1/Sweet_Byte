@@ -3,9 +3,6 @@ import { useMocks } from "./config";
 import * as mockStore from "./mocks/mockStore";
 import { toLedgerEntry } from "./pricingApi";
 
-export const operatorEnabled =
-  useMocks || process.env.NEXT_PUBLIC_ENABLE_OPERATOR === "true";
-
 export async function getOperatorDashboard() {
   if (useMocks) return mockStore.getOperatorDashboard();
   return apiRequest("/api/operator/dashboard");

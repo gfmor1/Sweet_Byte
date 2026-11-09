@@ -24,6 +24,16 @@ public class DispatchQueue {
         waiting.putIfAbsent(orderId, Objects.requireNonNull(at, "at"));
     }
 
+    /** Puts an order at the head of the queue (declined or reassigned). */
+    public synchronized void enqueueFirst(Long orderId, Instant at) {
+        Objects.requireNonNull(orderId, "orderId");
+        LinkedHashMap<Long, Instant> previous = new LinkedHashMap<>(waiting);
+        previous.remove(orderId);
+        waiting.clear();
+        waiting.put(orderId, Objects.requireNonNull(at, "at"));
+        waiting.putAll(previous);
+    }
+
     /** Removes and returns the oldest waiting order, if any. */
     public synchronized Optional<Long> poll() {
         Iterator<Long> it = waiting.keySet().iterator();
