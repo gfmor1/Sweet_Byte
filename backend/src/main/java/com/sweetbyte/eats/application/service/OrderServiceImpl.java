@@ -24,17 +24,20 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
+    private final DispatchService dispatchService; 
 
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
         MenuItemRepository menuItemRepository,
         EventService eventService,
-        OrderPermissionResolver permissionResolver) {
+        OrderPermissionResolver permissionResolver,
+        DispatchService dispatchService) {
         this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.permissionResolver = permissionResolver;
+        this.dispatchService = dispatchService;
     }
 
     @Override
@@ -120,6 +123,9 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
+        if (saved.getStatus() == OrderStatus.READY) {
+            dispatchService.onOrderReady(saved, user);    // R-DLV-01: dispatch starts only once READY
+        }
         return saved;
     }
 
@@ -129,7 +135,11 @@ public class OrderServiceImpl implements OrderService {
         Order order = findOrderById(orderId);
         permissionResolver.requireCancel(user,order); //refactored with Strategy method
         OrderStatus from = order.getStatus();
-        order.cancelByCustomer();
+        if (user.hasRole(Role.OPERATOR)) {
+            order.cancelByOperator();
+        } else {
+            order.cancelByCustomer();
+        }
         orderRepository.save(order);
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
     }
