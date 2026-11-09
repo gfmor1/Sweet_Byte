@@ -27,7 +27,7 @@ export async function reopenRestaurant(restaurantId) {
 export async function reassignOrder(orderId) {
   if (useMocks) return mockStore.reassignOrder(orderId);
   return apiRequest(
-    `/api/operator/orders/${encodeURIComponent(orderId)}/reassign`,
+    `/api/dispatch/orders/${encodeURIComponent(orderId)}/reassign`,
     { method: "POST" }
   );
 }

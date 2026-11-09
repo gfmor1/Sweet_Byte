@@ -1,7 +1,6 @@
 package com.sweetbyte.eats.application.service;
 import java.util.List;
 import java.util.Map;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
@@ -26,7 +25,6 @@ public class OrderServiceImpl implements OrderService {
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
     private final DispatchService dispatchService; 
-    private final ApplicationEventPublisher events;
     private final PricingService pricingService;
 
     public OrderServiceImpl(OrderRepository orderRepository, 
@@ -35,9 +33,7 @@ public class OrderServiceImpl implements OrderService {
         EventService eventService,
         OrderPermissionResolver permissionResolver,
         DispatchService dispatchService,
-        ApplicationEventPublisher events,
         PricingService pricingService) {
-        this.events = events;
         this.pricingService = pricingService;
         this.eventService = eventService;
         this.orderRepository = orderRepository;
@@ -133,7 +129,6 @@ public class OrderServiceImpl implements OrderService {
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
         if (saved.getStatus() == OrderStatus.READY) {
             dispatchService.onOrderReady(saved, user);    // R-DLV-01: dispatch starts only once READY
-            events.publishEvent(new OrderReadyEvent(saved.getOrderId()));
         }
         return saved;
     }
