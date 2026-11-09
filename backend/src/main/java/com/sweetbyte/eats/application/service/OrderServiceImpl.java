@@ -25,6 +25,7 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
+    private final DispatchService dispatchService; 
     private final ApplicationEventPublisher events;
     private final PricingService pricingService;
 
@@ -33,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
         MenuItemRepository menuItemRepository,
         EventService eventService,
         OrderPermissionResolver permissionResolver,
+        DispatchService dispatchService,
         ApplicationEventPublisher events,
         PricingService pricingService) {
         this.events = events;
@@ -42,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.permissionResolver = permissionResolver;
+        this.dispatchService = dispatchService;
     }
 
     @Override
@@ -128,7 +131,10 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
-        if (saved.getStatus() == OrderStatus.READY) events.publishEvent(new OrderReadyEvent(saved.getOrderId()));
+        if (saved.getStatus() == OrderStatus.READY) {
+            dispatchService.onOrderReady(saved, user);    // R-DLV-01: dispatch starts only once READY
+            events.publishEvent(new OrderReadyEvent(saved.getOrderId()));
+        }
         return saved;
     }
 
@@ -138,7 +144,11 @@ public class OrderServiceImpl implements OrderService {
         Order order = findOrderById(orderId);
         permissionResolver.requireCancel(user,order); //refactored with Strategy method
         OrderStatus from = order.getStatus();
-        order.cancelByCustomer();
+        if (user.hasRole(Role.OPERATOR)) {
+            order.cancelByOperator();
+        } else {
+            order.cancelByCustomer();
+        }
         orderRepository.save(order);
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
     }

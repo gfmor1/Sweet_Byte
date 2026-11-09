@@ -15,6 +15,7 @@ public class CustomerPermissions implements OrderPermissionStrategy {
     }
 
     //get the role of the user in this case customer
+    @Override
     public Role getRole() {
         return Role.CUSTOMER;
     }
