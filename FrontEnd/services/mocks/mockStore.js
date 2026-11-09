@@ -1,4 +1,4 @@
-import { STALLED_AFTER_MS, PRICING_CONFIG, calculateFare } from "../config";
+import { PRICING_CONFIG, calculateFare } from "../config";
 import { createSeed } from "./mockData";
 
 // In-memory simulation of the backend rules. Every public function returns a Promise
@@ -37,8 +37,14 @@ function queueSize(restaurantId) {
   ).length;
 }
 
+// Stalled: the courier accepted the order, then went offline before pickup (UC-DRV-07).
 function isStalled(order) {
-  return order.status === "READY" && Date.now() - Date.parse(order.readyAt) > STALLED_AFTER_MS;
+  return (
+    order.status === "READY" &&
+    order.courierId !== null &&
+    order.offerAccepted &&
+    findCourier(order.courierId).status === "OFFLINE"
+  );
 }
 
 function distance(a, b) {
@@ -173,7 +179,9 @@ export const courierGoOnDuty = () =>
   respond(() => {
     const courier = findCourier(actingCourierId);
     if (courier.status !== "OFFLINE") fail("You are already on duty.");
-    makeIdle(courier);
+    // A courier who still holds an accepted order resumes it.
+    if (courier.currentOrderId !== null) courier.status = "ASSIGNED";
+    else makeIdle(courier);
     return courierView(courier);
   });
 
@@ -182,15 +190,14 @@ export const courierGoOffDuty = () =>
     const courier = findCourier(actingCourierId);
     if (courier.status === "OFFLINE") fail("You are already off duty.");
     if (courier.status === "CARRYING") fail("You cannot go off duty while carrying an order.");
-    if (courier.status === "ASSIGNED") {
-      // Give the unaccepted/unpicked order back to the dispatch queue.
+    if (courier.status === "ASSIGNED" && !findOrder(courier.currentOrderId).offerAccepted) {
+      // An unaccepted offer goes back to the queue; an accepted order stalls until the operator acts.
       const order = findOrder(courier.currentOrderId);
       order.courierId = null;
-      order.offerAccepted = false;
       state.dispatchQueue.unshift(order.id);
+      courier.currentOrderId = null;
     }
     courier.status = "OFFLINE";
-    courier.currentOrderId = null;
     dispatch(courier.id);
     return courierView(courier);
   });
@@ -198,7 +205,7 @@ export const courierGoOffDuty = () =>
 export const courierGetOffer = () =>
   respond(() => {
     const courier = findCourier(actingCourierId);
-    if (courier.currentOrderId === null) return null;
+    if (courier.status === "OFFLINE" || courier.currentOrderId === null) return null;
     return offerView(findOrder(courier.currentOrderId), courier);
   });
 
@@ -285,14 +292,12 @@ export const reassignOrder = (orderId) =>
   respond(() => {
     const order = findOrder(orderId);
     if (!isStalled(order)) fail("Only stalled orders can be reassigned.");
-    const previous = order.courierId === null ? null : findCourier(order.courierId);
+    findCourier(order.courierId).currentOrderId = null;
     order.courierId = null;
     order.offerAccepted = false;
     order.readyAt = new Date().toISOString();
     state.dispatchQueue = [order.id, ...state.dispatchQueue.filter((id) => id !== order.id)];
-    // Try other couriers first, then release the previous one.
-    dispatch(previous?.id ?? null);
-    if (previous) makeIdle(previous);
+    dispatch();
     return orderView(order);
   });
 
@@ -333,5 +338,12 @@ export const getOrderSummary = (orderId) =>
     };
   });
 
-// History is the ledger; the backend must scope it to the authenticated user.
-export const getHistory = getLedger;
+// History is the ledger, scoped like the backend does: a courier sees only their own deliveries.
+export const getHistory = (role) =>
+  respond(() =>
+    copy(
+      state.ledger.filter(
+        (entry) => role !== "COURIER" || findOrder(entry.orderId).courierId === actingCourierId
+      )
+    )
+  );

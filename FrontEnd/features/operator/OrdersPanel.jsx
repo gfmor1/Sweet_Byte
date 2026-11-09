@@ -109,7 +109,7 @@ export default function OrdersPanel({ orders, loaded, disabled, onReassign, onRe
               <div className={styles.orderHead}>
                 <h3>Order #{order.id}</h3>
                 <StatusPill status={order.status} />
-                {stalled && <span className={styles.stalledTag}>Stalled: no courier pickup</span>}
+                {stalled && <span className={styles.stalledTag}>Stalled: courier offline</span>}
               </div>
               <div className={styles.meta}>
                 <span>{order.restaurantName}</span>

@@ -24,6 +24,3 @@ export function calculateFare(subtotal, config = PRICING_CONFIG) {
     currency: config.currency,
   };
 }
-
-// Orders waiting in READY longer than this are "stalled" and can be reassigned (mock rule).
-export const STALLED_AFTER_MS = 2 * 60 * 1000;

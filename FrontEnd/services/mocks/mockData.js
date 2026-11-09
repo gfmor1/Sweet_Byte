@@ -16,7 +16,7 @@ export function createSeed() {
   const couriers = [
     { id: 1, name: "Ava Tremblay", status: "CARRYING", latitude: 45.5236, longitude: -73.5815, currentOrderId: 1 },
     { id: 2, name: "Ben Roy", status: "ASSIGNED", latitude: 45.53, longitude: -73.58, currentOrderId: 2 },
-    { id: 3, name: "Chloe Gagnon", status: "OFFLINE", latitude: 45.495, longitude: -73.58, currentOrderId: null },
+    { id: 3, name: "Chloe Gagnon", status: "OFFLINE", latitude: 45.495, longitude: -73.58, currentOrderId: 3 },
   ];
 
   const itemPool = [
@@ -49,7 +49,7 @@ export function createSeed() {
   const orders = [
     order(1, 2, "PICKED_UP", { courierId: 1, offerAccepted: true, readyAt: ago(15 * MIN) }),
     order(2, 1, "READY", { courierId: 2, readyAt: ago(30 * 1000) }),
-    order(3, 4, "READY", { readyAt: ago(10 * MIN) }), // stalled: waiting with no courier
+    order(3, 4, "READY", { courierId: 3, offerAccepted: true, readyAt: ago(10 * MIN) }), // stalled: courier accepted, then went offline
     order(4, 1, "DELIVERED", {
       courierId: 2,
       offerAccepted: true,
@@ -67,6 +67,7 @@ export function createSeed() {
     order(12, 1, "ACCEPTED"),
     order(13, 1, "PREPARING"),
     order(14, 1, "PREPARING"),
+    order(15, 4, "READY", { readyAt: ago(3 * MIN) }), // waiting in the dispatch queue
   ];
 
   const subtotal = (o) => o.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -76,7 +77,7 @@ export function createSeed() {
     restaurants,
     couriers,
     orders,
-    dispatchQueue: [3],
+    dispatchQueue: [15],
     ledger: [
       {
         entryId: 1,
@@ -88,7 +89,7 @@ export function createSeed() {
         currency: "CAD",
       },
     ],
-    nextOrderId: 15,
+    nextOrderId: 16,
     nextLedgerId: 2,
   };
 }
