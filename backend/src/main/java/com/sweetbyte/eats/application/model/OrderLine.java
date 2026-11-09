@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.model;
 
+import java.math.BigDecimal;
+
 import java.util.Objects;
 
 import jakarta.persistence.Column;
@@ -33,9 +35,8 @@ public class OrderLine {
 
     // Price copied from the menu item when the order is placed,
     // so later menu price changes don't alter past orders.
-    // precision/scale are ignored by Hibernate for Double, so the column type is set explicitly.
-    @Column(nullable = false, updatable = false, columnDefinition = "DECIMAL(10,2)")
-    private Double unitPrice;
+    @Column(nullable = false, updatable = false, precision = 10, scale = 2)
+    private BigDecimal unitPrice;
 
     // Required by JPA to load rows from the database. Not for our code.
     protected OrderLine() { }
@@ -56,11 +57,11 @@ public class OrderLine {
     public Order getOrder()       { return order; }
     public MenuItem getItem()     { return item; }
     public Integer getQuantity()  { return quantity; }
-    public Double getUnitPrice()  { return unitPrice; }
+    public BigDecimal getUnitPrice()  { return unitPrice; }
 
     // ---- behaviour ----
-    public double getLineTotal() {
-        return unitPrice * quantity;
+    public BigDecimal getLineTotal() {
+        return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
     // ---- identity (same idea as Order) ----
@@ -70,7 +71,7 @@ public class OrderLine {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof OrderLine other)) return false;
-        return orderLineId != null && orderLineId.equals(other.orderLineId);
+        return orderLineId != null && orderLineId.equals(other.getOrderLineId());
     }
 
     @Override

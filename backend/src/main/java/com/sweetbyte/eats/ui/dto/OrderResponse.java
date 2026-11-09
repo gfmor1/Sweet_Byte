@@ -3,7 +3,9 @@ package com.sweetbyte.eats.ui.dto;
 import java.time.Instant;
 import java.util.List;
 
+import com.sweetbyte.eats.application.enums.CourierStatus;
 import com.sweetbyte.eats.application.enums.OrderStatus;
+import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.OrderLine;
 
@@ -16,7 +18,13 @@ public record OrderResponse(Long orderId,
         Instant placedAt,
         Instant acceptedAt,
         Instant readyAt,
-        String reason) {
+        Instant deliveredAt,
+        String reason,
+        Long courierId,
+        String courierName,
+        CourierStatus courierStatus,
+        Double courierLatitude,
+        Double courierLongitude) {
     public record Line(Long menuItemId, String name, Integer quantity) {
         static Line from(OrderLine line) {
             return new Line(line.getItem().getItemId(),
@@ -26,6 +34,7 @@ public record OrderResponse(Long orderId,
     }
 
     public static OrderResponse from (Order order) {
+        Courier courier = order.getCourier();
         return new OrderResponse(order.getOrderId(),
                 order.getRestaurant().getRestaurantId(),
                 order.getRestaurant().getName(),
@@ -34,7 +43,13 @@ public record OrderResponse(Long orderId,
                 order.getPlacedAt(),
                 order.getAcceptedAt(),
                 order.getReadyAt(),
-                order.getRejectionReason()
+                order.getDeliveredAt(),
+                order.getRejectionReason(),
+                courier == null ? null : courier.getUserId(),
+                courier == null ? null : courier.getName(),
+                courier == null ? null : courier.getStatus(),
+                courier == null ? null : courier.getLatitude(),
+                courier == null ? null : courier.getLongitude()
         );
     }
 }

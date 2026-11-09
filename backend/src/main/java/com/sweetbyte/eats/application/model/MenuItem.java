@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.model;
 
+import java.math.BigDecimal;
+
 import com.sweetbyte.eats.application.enums.MenuItemStatus;
 
 import jakarta.persistence.Column;
@@ -32,9 +34,9 @@ public class MenuItem {
     @Column(name = "name", nullable = false)
     private String name;
 
-    // precision/scale are ignored by Hibernate for Double, so the column type is set explicitly
-    @Column(name = "price", nullable = false, columnDefinition = "DECIMAL(10,2)")
-    private Double price;
+    // Money is BigDecimal: exact cents, so the fare matches a hand computation (R-PRC-01).
+    @Column(name = "price", nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -44,7 +46,7 @@ public class MenuItem {
         // required by JPA
     }
 
-    public MenuItem(Restaurant restaurant, String name, Double price, MenuItemStatus status) {
+    public MenuItem(Restaurant restaurant, String name, BigDecimal price, MenuItemStatus status) {
         this.restaurant = restaurant;
         this.name = validateName(name);
         this.price = validatePrice(price);
@@ -60,14 +62,17 @@ public class MenuItem {
         return name.trim();
     }
 
-    private static Double validatePrice(Double price) {
+    private static BigDecimal validatePrice(BigDecimal price) {
         if (price == null) {
             throw new IllegalArgumentException("Menu item price must not be null");
         }
-        if (price < 0) {
+        if (price.signum() < 0) {
             throw new IllegalArgumentException("Menu item price must not be negative, got: " + price);
         }
-        return price;
+        if (price.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException("Menu item price must have at most 2 decimals, got: " + price);
+        }
+        return price.setScale(2);
     }
 
     // re-checks before we writes to the DB,
@@ -101,11 +106,11 @@ public class MenuItem {
         this.name = validateName(name);
     }
 
-    public Double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Double price) {
+    public void setPrice(BigDecimal price) {
         this.price = validatePrice(price);
     }
 

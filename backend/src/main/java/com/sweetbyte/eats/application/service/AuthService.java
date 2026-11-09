@@ -2,6 +2,7 @@ package com.sweetbyte.eats.application.service;
 
 import java.util.UUID;
 
+import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
@@ -17,6 +18,7 @@ public interface AuthService {
     // The owner registers together with a new restaurant
     RestaurantOwner registerRestaurantOwner(UUID supabaseUid, String email, String name, String restaurantName);
 
-    // TODO: registerCourier
+    Courier registerCourier(UUID supabaseUid, String email, String name);
+
     // Operators are staff: seeded only, never self-registered
 }

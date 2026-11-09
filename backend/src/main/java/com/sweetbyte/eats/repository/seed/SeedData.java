@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.repository.seed;
 
+import java.math.BigDecimal;
+
 import java.util.List;
 
 import com.sweetbyte.eats.application.enums.MenuItemStatus;
@@ -17,7 +19,7 @@ public record SeedData(List<RestaurantSeed> restaurants,
     public record RestaurantSeed(String name, RestaurantStatus status, double latitude, double longitude,
                                  UserSeed owner, List<MenuItemSeed> menu) {}
 
-    public record MenuItemSeed(String name, Double price, MenuItemStatus status) {}
+    public record MenuItemSeed(String name, BigDecimal price, MenuItemStatus status) {}
 
     public record UserSeed(String name, String email, String password) {}
 

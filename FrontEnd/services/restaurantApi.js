@@ -14,13 +14,28 @@ function toRestaurant(restaurant) {
   return {
     id: restaurant.restaurantID,
     name: restaurant.name,
-    status: restaurant.status
+    status: restaurant.status,
+    latitude: restaurant.latitude,
+    longitude: restaurant.longitude,
+    queueSize: restaurant.queueSize
   };
 }
 
 export async function getRestaurants() {
   const restaurants = await apiRequest("/api/restaurants");
   return restaurants.map(toRestaurant);
+}
+
+// Restaurants plus their queue size for the map; the list endpoint does not include it.
+export async function getRestaurantsWithQueues() {
+  const restaurants = await getRestaurants();
+  const sizes = await Promise.allSettled(
+    restaurants.map((restaurant) => apiRequest(`/api/restaurants/${restaurant.id}/queue/size`))
+  );
+  return restaurants.map((restaurant, index) => ({
+    ...restaurant,
+    queueSize: sizes[index].status === "fulfilled" ? sizes[index].value : undefined
+  }));
 }
 
 export async function getRestaurant(restaurantId) {
