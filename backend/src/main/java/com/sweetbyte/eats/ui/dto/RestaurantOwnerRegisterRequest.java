@@ -5,5 +5,4 @@ package com.sweetbyte.eats.ui.dto;
 public record RestaurantOwnerRegisterRequest(String name, String restaurantName) {
 }
 
-//TODO: CourierRegisterRequest (couriers can't register yet)
 //Operators are staff: seeded only, no register request

@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sweetbyte.eats.application.service.AuthService;
+import com.sweetbyte.eats.ui.dto.CourierMeResponse;
+import com.sweetbyte.eats.ui.dto.CourierRegisterRequest;
 import com.sweetbyte.eats.ui.dto.CustomerMeResponse;
 import com.sweetbyte.eats.ui.dto.CustomerRegisterRequest;
 import com.sweetbyte.eats.ui.dto.MeResponse;
@@ -48,7 +50,15 @@ public class AuthController {
                 supabaseUid(jwt), jwt.getClaimAsString("email"), body.name(), body.restaurantName()));
     }
 
-    // TODO: POST /api/auth/register/courier
+    // POST /api/auth/register/courier  (after supabase.auth.signUp)
+    @PostMapping("/register/courier")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CourierMeResponse registerCourier(@AuthenticationPrincipal Jwt jwt,
+                                             @RequestBody CourierRegisterRequest body) {
+        return CourierMeResponse.from(authService.registerCourier(
+                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name()));
+    }
+
     // Operators are staff: seeded only, no register endpoint
 
     // GET /api/auth/me  (after login: shape depends on the role, see MeResponse)
