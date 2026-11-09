@@ -6,6 +6,7 @@ import { useMapFocus } from "../components/MapFocusContext";
 import CourierActions from "../features/courier/CourierActions";
 import CourierStatus from "../features/courier/CourierStatus";
 import OfferCard from "../features/courier/OfferCard";
+import OrderHistory from "../features/pricing/OrderHistory";
 import styles from "../features/courier/courier.module.css";
 import useCourier from "../features/courier/useCourier";
 
@@ -62,6 +63,12 @@ export default function CourierDashboard({ user, onLog }) {
       content: (
         <CourierStatus courier={courier} offer={offer} busy={busy} onCommand={runCommand} />
       ),
+    },
+    {
+      id: "history",
+      label: "History",
+      // Couriers never see what the customer paid.
+      content: <OrderHistory showAmounts={false} onLog={onLog} />,
     },
   ];
 

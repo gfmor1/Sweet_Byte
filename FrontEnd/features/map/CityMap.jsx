@@ -9,10 +9,12 @@ import {
   Polyline,
   Popup,
   TileLayer,
+  Tooltip,
   useMap,
   useMapEvents,
 } from "react-leaflet";
 import QueueBadge from "../shared/QueueBadge";
+import { BAND_LABELS, getQueueBand } from "../shared/queueBands";
 import { formatEnum } from "../../services/enumApi";
 
 const DEFAULT_CENTER = [45.5017, -73.5673]; // Montreal
@@ -20,7 +22,7 @@ const FIT_PADDING = [40, 40];
 const SINGLE_POINT_ZOOM = 14;
 const MAX_FIT_ZOOM = 16;
 
-const RESTAURANT_STATUSES = ["OPEN", "PAUSED", "CLOSED"];
+const QUEUE_BANDS = ["green", "amber", "red"];
 const COURIER_STATUSES = ["IDLE", "ASSIGNED", "CARRYING"];
 
 const hasLocation = (item) =>
@@ -175,6 +177,7 @@ export default function CityMap({
     [couriers, route]
   );
   const sizeStyle = height ? { height } : undefined;
+  const [showLabels, setShowLabels] = useState(true);
 
   const points = useMemo(
     () =>
@@ -233,16 +236,25 @@ export default function CityMap({
   return (
     <div className="city-map-wrapper">
       <div className="city-map" style={{ ...sizeStyle, position: "relative" }}>
-        {viewToggle && (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={viewToggle.onClick}
-            style={{ position: "absolute", top: 12, right: 12, zIndex: 1000 }}
-          >
-            {viewToggle.label}
-          </button>
-        )}
+        <div
+          style={{ position: "absolute", top: 12, right: 12, zIndex: 1000, display: "flex", gap: 6 }}
+        >
+          {shownRestaurants.length > 0 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              aria-pressed={showLabels}
+              onClick={() => setShowLabels((previous) => !previous)}
+            >
+              {showLabels ? "Hide labels" : "Show labels"}
+            </button>
+          )}
+          {viewToggle && (
+            <button type="button" className="btn-secondary" onClick={viewToggle.onClick}>
+              {viewToggle.label}
+            </button>
+          )}
+        </div>
         {picker && (
           <p
             role="status"
@@ -354,11 +366,16 @@ export default function CityMap({
               position={[Number(restaurant.latitude), Number(restaurant.longitude)]}
               icon={pinIcon(
                 "restaurant",
-                restaurant.status,
+                `band-${getQueueBand(restaurant.queueSize, restaurant.status)}`,
                 String(restaurant.id) === String(highlightRestaurantId)
               )}
               eventHandlers={{ click: () => onSelectRestaurant?.(restaurant) }}
             >
+              {showLabels && (
+                <Tooltip permanent direction="right" offset={[16, 0]}>
+                  {restaurant.name} · {Number(restaurant.queueSize) || 0} queued
+                </Tooltip>
+              )}
               <Popup>
                 <strong>{restaurant.name}</strong>
                 <br />
@@ -366,7 +383,7 @@ export default function CityMap({
                 {restaurant.queueSize !== undefined && restaurant.queueSize !== null && (
                   <>
                     <br />
-                    <QueueBadge size={restaurant.queueSize} />
+                    <QueueBadge size={restaurant.queueSize} status={restaurant.status} />
                   </>
                 )}
               </Popup>
@@ -398,10 +415,10 @@ export default function CityMap({
         </ul>
       ) : (
       <ul className="map-legend" aria-label="Map legend">
-        {RESTAURANT_STATUSES.map((status) => (
-          <li key={status}>
-            <span className={`map-legend-swatch map-pin-restaurant map-pin-${status.toLowerCase()}`} />
-            Restaurant {formatEnum(status)}
+        {QUEUE_BANDS.map((band) => (
+          <li key={band}>
+            <span className={`map-legend-swatch map-pin-restaurant map-pin-band-${band}`} />
+            Queue {BAND_LABELS[band]}
           </li>
         ))}
         {COURIER_STATUSES.map((status) => (

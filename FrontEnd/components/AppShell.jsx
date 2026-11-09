@@ -7,10 +7,11 @@ import RestaurantDashboard from "../views/RestaurantDashboard";
 import OperatorDashboard from "../views/OperatorDashboard";
 import CourierDashboard from "../views/CourierDashboard";
 import CityMapLazy from "../features/map/CityMapLazy";
+import RestaurantDetails from "../features/map/RestaurantDetails";
 import OutputConsole from "./OutputConsole";
 import { useConsole } from "./ConsoleContext";
 import { getCouriers, getMapRestaurants } from "../services/dispatchApi";
-import { getRestaurants } from "../services/restaurantApi";
+import { getRestaurantsWithQueues } from "../services/restaurantApi";
 import { applyRestaurantOverrides } from "../services/locationOverrides";
 import { formatEnum } from "../services/enumApi";
 
@@ -43,7 +44,7 @@ function AppShellContent({ user, onLogout }) {
     // store has its own ids, so pins would never match); only courier/operator use the mock map.
     const usesRealRestaurants = user.role === "CUSTOMER" || user.role === "RESTAURANT_OWNER";
     const [restaurantResult, courierResult] = await Promise.allSettled([
-      usesRealRestaurants ? getRestaurants() : getMapRestaurants(),
+      usesRealRestaurants ? getRestaurantsWithQueues() : getMapRestaurants(),
       getCouriers(),
     ]);
 
@@ -81,6 +82,8 @@ function AppShellContent({ user, onLogout }) {
 
   const { focus, extras } = useMapFocus();
   const [wholeCity, setWholeCity] = useState(false);
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState(null);
+  const selectedRestaurant = restaurants.find((r) => r.id === selectedRestaurantId) || null;
   // focus.restaurantIds (one or several) or the older single focus.restaurantId.
   const focusIds = focus?.restaurantIds
     ? focus.restaurantIds
@@ -146,14 +149,26 @@ function AppShellContent({ user, onLogout }) {
             restaurants={mapRestaurants}
             couriers={mapCouriers}
             route={route}
-            highlightRestaurantId={user.restaurantId}
+            highlightRestaurantId={selectedRestaurantId ?? user.restaurantId}
+            onSelectRestaurant={(restaurant) => setSelectedRestaurantId(restaurant.id)}
             viewToggle={viewToggle}
             userPin={extras.userPin}
             picker={extras.picker}
           />
         </section>
 
-        <main className="shell-dashboard">{renderDashboard(user, handleLog)}</main>
+        <main className="shell-dashboard">
+          {selectedRestaurant && (
+            <RestaurantDetails
+              restaurant={selectedRestaurant}
+              user={user}
+              onLog={handleLog}
+              onClose={() => setSelectedRestaurantId(null)}
+              onViewMenu={extras.onViewMenu}
+            />
+          )}
+          {renderDashboard(user, handleLog)}
+        </main>
       </div>
 
       <OutputConsole />

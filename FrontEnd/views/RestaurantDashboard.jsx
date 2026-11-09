@@ -7,6 +7,7 @@ import DispatchStatus from "../features/restaurant/DispatchStatus";
 import ManageMenu from "../features/restaurant/ManageMenu";
 import RestaurantSettings from "../features/restaurant/RestaurantSettings";
 import QueueBadge from "../features/shared/QueueBadge";
+import OrderHistory from "../features/pricing/OrderHistory";
 import Tabs from "../components/Tabs";
 import styles from "../features/restaurant/restaurant.module.css";
 import { getEnums, formatEnum } from "../services/enumApi";
@@ -319,7 +320,7 @@ function RestaurantDashboard({ restaurantId, onLog }) {
           >
             {formatEnum(restaurant.status)}
           </span>
-          <QueueBadge size={preparationQueueSize} />
+          <QueueBadge size={preparationQueueSize} status={restaurant.status} />
         </p>
       </header>
 
@@ -372,6 +373,15 @@ function RestaurantDashboard({ restaurantId, onLog }) {
                 onAddItem={handleAddItem}
                 onRemoveItem={handleRemoveItem}
               />
+            )
+          },
+          {
+            id: "history",
+            label: "History",
+            content: (
+              <div className={styles.stack}>
+                <OrderHistory onLog={onLog} />
+              </div>
             )
           },
           {

@@ -1,9 +1,9 @@
 import { BAND_LABELS, getQueueBand } from "./queueBands";
 
 // Colour plus a text label, so the band is never conveyed by colour alone.
-export default function QueueBadge({ size }) {
+export default function QueueBadge({ size, status }) {
   const count = Number(size) || 0;
-  const band = getQueueBand(count);
+  const band = getQueueBand(count, status);
 
   return (
     <span className={`queue-badge band-${band}`}>

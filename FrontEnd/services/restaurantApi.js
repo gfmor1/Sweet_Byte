@@ -26,6 +26,18 @@ export async function getRestaurants() {
   return restaurants.map(toRestaurant);
 }
 
+// Restaurants plus their queue size for the map; the list endpoint does not include it.
+export async function getRestaurantsWithQueues() {
+  const restaurants = await getRestaurants();
+  const sizes = await Promise.allSettled(
+    restaurants.map((restaurant) => apiRequest(`/api/restaurants/${restaurant.id}/queue/size`))
+  );
+  return restaurants.map((restaurant, index) => ({
+    ...restaurant,
+    queueSize: sizes[index].status === "fulfilled" ? sizes[index].value : undefined
+  }));
+}
+
 export async function getRestaurant(restaurantId) {
   return toRestaurant(await apiRequest(`/api/restaurants/${restaurantId}`));
 }

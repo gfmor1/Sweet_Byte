@@ -644,6 +644,18 @@ th {
   background: #757575;
 }
 
+.map-pin-band-green {
+  background: #2e7d32;
+}
+
+.map-pin-band-amber {
+  background: #b26a00;
+}
+
+.map-pin-band-red {
+  background: #c62828;
+}
+
 .map-pin-idle {
   background: #1565c0;
 }

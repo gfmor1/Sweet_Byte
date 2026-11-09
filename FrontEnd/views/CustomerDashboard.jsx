@@ -512,6 +512,20 @@ export default function CustomerDashboard({ user, onLog }) {
     return () => setMapFocus.current?.(null);
   }, []);
 
+  // "View menu" in the map's details panel.
+  const selectRestaurantRef = useRef(selectRestaurant);
+  selectRestaurantRef.current = selectRestaurant;
+
+  useEffect(() => {
+    setMapExtras.current?.({
+      onViewMenu: (restaurant) => {
+        setActiveTab("restaurants");
+        selectRestaurantRef.current(restaurant);
+      },
+    });
+    return () => setMapExtras.current?.({ onViewMenu: null });
+  }, []);
+
   // Scroll to an order card once the My Orders tab has rendered it.
   useEffect(() => {
     if (scrollTarget === null || activeTab !== "orders") return;

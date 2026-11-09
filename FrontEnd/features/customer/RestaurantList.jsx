@@ -135,7 +135,7 @@ function RestaurantList({
                     </span>{" "}
                     {restaurant.queueSize !== undefined &&
                       restaurant.queueSize !== null && (
-                        <QueueBadge size={restaurant.queueSize} />
+                        <QueueBadge size={restaurant.queueSize} status={restaurant.status} />
                       )}
                   </p>
 

@@ -41,7 +41,7 @@ export default function RestaurantsPanel({ restaurants, orders, loaded, disabled
                 <h3 className={styles.sectionTitle}>{r.name}</h3>
                 <StatusPill status={r.status} />
               </div>
-              <QueueBadge size={queueFor(r)} />
+              <QueueBadge size={queueFor(r)} status={r.status} />
               <div className={styles.actions}>
                 <button
                   className={styles.btn}

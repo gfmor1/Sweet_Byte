@@ -8,7 +8,8 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 //   picker:  null | { kind: "you"|"restaurant", label, point?: {latitude, longitude},
 //                     onPick(latitude, longitude) }            -> click-to-place mode
 //   visibleRestaurantIds: null | array of ids                  -> only these restaurants are drawn
-const EMPTY_EXTRAS = { userPin: null, picker: null, visibleRestaurantIds: null };
+//   onViewMenu: null | function(restaurant)                    -> "View menu" in the details panel
+const EMPTY_EXTRAS = { userPin: null, picker: null, visibleRestaurantIds: null, onViewMenu: null };
 const NOOP_VALUE = {
   focus: null,
   setFocus: () => {},

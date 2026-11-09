@@ -16,7 +16,7 @@ const HINTS = {
 
 const CAN_DO = [
   "Go on or off duty.",
-  "Accept the order offered to you.",
+  "Accept or decline the order offered to you.",
   "Confirm pickup at the restaurant.",
   "Confirm delivery at the drop-off.",
 ];
