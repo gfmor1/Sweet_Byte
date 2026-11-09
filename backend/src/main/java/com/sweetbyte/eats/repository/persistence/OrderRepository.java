@@ -1,5 +1,6 @@
 package com.sweetbyte.eats.repository.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,13 +18,13 @@ import com.sweetbyte.eats.application.model.Order;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
+    @EntityGraph(attributePaths = {"restaurant", "courier", "lines", "lines.item"})
     public Optional<Order> findById(Long orderId);
 
-    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
+    @EntityGraph(attributePaths = {"restaurant", "courier", "lines", "lines.item"})
     public List<Order> findByCustomerUserId(Long customerId);
 
-    @EntityGraph(attributePaths = {"restaurant", "lines", "lines.item"})
+    @EntityGraph(attributePaths = {"restaurant", "courier", "lines", "lines.item"})
     public List<Order> findByRestaurantRestaurantId(Long restaurantId);
 
     public List<Order> findByRestaurantRestaurantIdAndStatusOrderByArrivalSeqAsc(Long restaurantId, OrderStatus status);
@@ -35,4 +36,17 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     public List<Order> findByStatusAndCourierIsNullOrderByReadyAtAscArrivalSeqAsc(OrderStatus status);
 
     public List<Order> findByStatusAndCourier_Status(OrderStatus ready, CourierStatus offline);
+
+    // Delivery views also read the customer (drop-off position, name)
+    @EntityGraph(attributePaths = {"restaurant", "customer", "courier", "lines", "lines.item"})
+    public Optional<Order> findWithDeliveryDetailsByOrderId(Long orderId);
+
+    // At most one, because a courier holds at most one order (R-DLV-03)
+    @EntityGraph(attributePaths = {"restaurant", "customer", "courier", "lines", "lines.item"})
+    public Optional<Order> findByCourierUserIdAndStatusIn(Long courierId, Collection<OrderStatus> statuses);
+
+    @EntityGraph(attributePaths = {"restaurant", "customer", "courier", "lines", "lines.item"})
+    public List<Order> findAllByOrderByOrderIdDesc();
+
+    public List<Order> findByStatusAndCourierIsNullOrderByReadyAtAsc(OrderStatus status);
 }

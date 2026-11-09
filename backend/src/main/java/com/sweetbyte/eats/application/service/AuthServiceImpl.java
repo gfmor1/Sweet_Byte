@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
+import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
@@ -16,7 +17,7 @@ import com.sweetbyte.eats.repository.persistence.UserRepository;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    // TODO: no geocoding yet, new customers/restaurants start at the city centre (Montreal)
+    // TODO: no geocoding yet, new customers/restaurants/couriers start at the city centre (Montreal)
     private static final double DEFAULT_LATITUDE = 45.5017;
     private static final double DEFAULT_LONGITUDE = -73.5673;
 
@@ -54,7 +55,12 @@ public class AuthServiceImpl implements AuthService {
         return userRepository.save(new RestaurantOwner(supabaseUid, name, email, restaurant));
     }
 
-    // TODO: registerCourier
+    @Override
+    @Transactional
+    public Courier registerCourier(UUID supabaseUid, String email, String name) {
+        requireNotRegistered(supabaseUid, email);
+        return userRepository.save(new Courier(supabaseUid, name, email, DEFAULT_LATITUDE, DEFAULT_LONGITUDE));
+    }
 
     // Registering is one-time: refuse if this Supabase login already has a SweetByte account,
     // or if another account already uses the token's email (users.email is unique)

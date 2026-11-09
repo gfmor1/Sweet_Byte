@@ -54,3 +54,4 @@ HELP.md
 
 # Claude Code local settings
 .claude/settings.local.json
+.DS_Store

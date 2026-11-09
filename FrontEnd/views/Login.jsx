@@ -40,6 +40,13 @@ function Login({ onLoginSuccess }) {
         <button type="submit">Login</button>
       </form>
 
+      {process.env.NEXT_PUBLIC_USE_MOCKS === "true" && (
+        <p className="auth-hint">
+          Mock mode: courier@sweetbyte.test and operator@sweetbyte.test sign in locally (password
+          demo123).
+        </p>
+      )}
+
       <StatusMessage status={status} />
     </div>
   );
