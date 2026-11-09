@@ -61,6 +61,7 @@ public final class DeliveryOffer {
 
     public Long getOfferId()       { return offerId; }
     public Order getOrder()        { return order; }
+    public Long getOrderId()       { return order.getOrderId(); }
     public Courier getCourier()    { return courier; }
     public OfferStatus getStatus() { return status; }
     public Instant getOfferedAt()  { return offeredAt; }

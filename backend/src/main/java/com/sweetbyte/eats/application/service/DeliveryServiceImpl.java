@@ -267,7 +267,7 @@ public class DeliveryServiceImpl implements DeliveryService {
             Optional<Courier> nearest = nearestIdle(found.get().getRestaurant(), skipCourierId);
             if (nearest.isEmpty()) return;
             Long courierId = nearest.get().getUserId();
-            offersByCourier.put(courierId, new DeliveryOffer(orderId, courierId, Instant.now()));
+            offersByCourier.put(courierId, new DeliveryOffer(found.get(), nearest.get()));
             queue.remove(orderId);
         }
     }
