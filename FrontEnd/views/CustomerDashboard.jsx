@@ -16,6 +16,9 @@ import OrderTracker, {
 } from "../features/customer/OrderTracker";
 import ActiveOrdersBar from "../features/customer/ActiveOrdersBar";
 import { courierMarker } from "../features/customer/normalizeCourier";
+import CustomerPaymentsPanel from "../features/payment/CustomerPaymentsPanel";
+import { attachPaymentToOrder, chargeOrder, paymentsEnabled } from "../services/paymentApi";
+import { calculateFare } from "../services/config";
 import OrderHistory from "../features/pricing/OrderHistory";
 import OrderSummary from "../features/pricing/OrderSummary";
 import styles from "../features/customer/customer.module.css";
@@ -54,6 +57,7 @@ export default function CustomerDashboard({ user, onLog }) {
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [paymentsKey, setPaymentsKey] = useState(0);
 
   const [activeTab, setActiveTab] = useState("restaurants");
   const [focusedOrderId, setFocusedOrderId] = useState(null);
@@ -321,7 +325,7 @@ export default function CustomerDashboard({ user, onLog }) {
     }
   }
 
-  async function handlePlaceOrder(items) {
+  async function handlePlaceOrder(items, { subtotal = 0 } = {}) {
     setError("");
     setMessage("");
 
@@ -331,10 +335,31 @@ export default function CustomerDashboard({ user, onLog }) {
     });
 
     try {
+      // Charge the saved card first; a decline stops the order from being placed.
+      let payment = null;
+      if (paymentsEnabled) {
+        onLog?.({ command: "Charge payment card" });
+        try {
+          payment = await chargeOrder(user, { amount: calculateFare(subtotal).total });
+          onLog?.({ command: "Charge payment card", result: "Success" });
+        } catch (chargeErr) {
+          setPaymentsKey((previous) => previous + 1);
+          const hint = chargeErr.status === 402 && /card first/i.test(chargeErr.message)
+            ? " Open the Payments tab to add one."
+            : "";
+          throw new Error(chargeErr.message + hint);
+        }
+      }
+
       const order = await placeOrder(
         selectedRestaurant.id,
         items
       );
+
+      if (payment) {
+        attachPaymentToOrder(payment.paymentId, order.id).catch(() => {});
+        setPaymentsKey((previous) => previous + 1);
+      }
 
       onLog?.({
         command: "Place Order",
@@ -685,6 +710,21 @@ export default function CustomerDashboard({ user, onLog }) {
             content: ordersContent,
           },
           { id: "history", label: "History", content: historyContent },
+          ...(paymentsEnabled
+            ? [
+                {
+                  id: "payments",
+                  label: "Payments",
+                  content: (
+                    <CustomerPaymentsPanel
+                      user={user}
+                      onLog={onLog}
+                      refreshKey={paymentsKey}
+                    />
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 

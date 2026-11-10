@@ -102,6 +102,13 @@ const RULES = {
     roles: [OPERATOR],
     check: (ctx) => (ctx.orderStatus !== "DELIVERED" ? "Only delivered orders can be refunded." : null),
   },
+  viewOwnPayments: { roles: [CUSTOMER] },
+  manageCard: { roles: [CUSTOMER] },
+  viewAllPayments: { roles: [OPERATOR] },
+  refundPayment: {
+    roles: [OPERATOR],
+    check: (ctx) => (ctx.paymentStatus !== "PAID" ? "Only a paid payment can be refunded." : null),
+  },
   reset: { roles: [OPERATOR] },
   viewAllOrders: { roles: [OPERATOR] },
 };

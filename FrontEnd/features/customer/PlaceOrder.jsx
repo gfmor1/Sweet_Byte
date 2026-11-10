@@ -87,7 +87,7 @@ export default function PlaceOrder({
     setSubmitting(true);
 
     try {
-      const successful = await onPlaceOrder(orderLines);
+      const successful = await onPlaceOrder(orderLines, { subtotal });
 
       if (successful) {
         setQuantities({});

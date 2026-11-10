@@ -17,6 +17,8 @@ import OverviewPanel from "../features/operator/OverviewPanel";
 import CouriersTable from "../features/operator/CouriersTable";
 import DispatchQueue from "../features/operator/DispatchQueue";
 import OrdersPanel from "../features/operator/OrdersPanel";
+import OperatorPaymentsPanel from "../features/payment/OperatorPaymentsPanel";
+import { paymentsEnabled, refundPayment } from "../services/paymentApi";
 import LedgerTable from "../features/operator/LedgerTable";
 import styles from "../features/operator/operator.module.css";
 
@@ -158,6 +160,28 @@ export default function OperatorDashboard({ user, onLog }) {
       label: "Ledger",
       content: <LedgerTable ledger={data.ledger} loaded={data.loaded} />,
     },
+    ...(paymentsEnabled
+      ? [
+          {
+            id: "payments",
+            label: "Payments",
+            content: (
+              <OperatorPaymentsPanel
+                payments={data.payments}
+                loaded={data.loaded}
+                disabled={disabled}
+                onRefund={(p) =>
+                  runCommand(
+                    `Refund payment #${p.paymentId}`,
+                    () => refundPayment(p.paymentId),
+                    `Payment #${p.paymentId} refunded.`
+                  )
+                }
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

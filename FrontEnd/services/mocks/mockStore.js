@@ -287,6 +287,7 @@ export const refundOrder = (orderId) =>
     if (order.status !== "DELIVERED") fail("Only delivered orders can be refunded.");
     order.status = "REFUNDED";
     addLedgerEntry(order, "REFUND", "REFUNDED");
+    markPaymentRefunded(order.id);
     return orderView(order);
   });
 
@@ -297,6 +298,125 @@ export const resetSystem = () =>
     state = createSeed();
     actingCourierId = state.couriers[0].id;
     return null;
+  });
+
+// --- Payments (mock; the backend owns real payment data) ---
+
+const DEMO_CUSTOMER = "demo";
+const DECLINE_LAST4 = "0002"; // test card 4000 0000 0000 0002 is always declined
+
+function markPaymentRefunded(orderId) {
+  const payment = state.payments.find((p) => p.orderId === orderId && p.status === "PAID");
+  if (payment) {
+    payment.status = "REFUNDED";
+    payment.refundedAt = new Date().toISOString();
+  }
+  return payment;
+}
+
+function cardBrand(number) {
+  if (number.startsWith("4")) return "VISA";
+  if (/^(5[1-5]|2[2-7])/.test(number)) return "MASTERCARD";
+  if (/^3[47]/.test(number)) return "AMEX";
+  return "CARD";
+}
+
+// History is scoped to the customer; the seeded "demo" rows are shared so the mock has data.
+export const getMyPayments = (customerId) =>
+  respond(() =>
+    copy(
+      state.payments
+        .filter((p) => p.customerId === customerId || p.customerId === DEMO_CUSTOMER)
+        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    )
+  );
+
+export const getAllPayments = () =>
+  respond(() => copy([...state.payments].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))));
+
+export const getSavedCard = (customerId) =>
+  respond(() => copy(state.savedCards[customerId] || null));
+
+// Only brand + last4 are kept: the mock never stores a full number or CVV.
+export const saveCard = (customerId, card) =>
+  respond(() => {
+    const number = String(card.number || "").replace(/\s+/g, "");
+    if (!/^\d{13,19}$/.test(number)) fail("Enter a valid card number.", 400);
+    if (!String(card.holder || "").trim()) fail("Enter the name on the card.", 400);
+    const month = Number(card.expMonth);
+    const year = Number(card.expYear);
+    if (!(month >= 1 && month <= 12)) fail("Enter a valid expiry month.", 400);
+    const fullYear = year < 100 ? 2000 + year : year;
+    if (!Number.isFinite(fullYear) || new Date(fullYear, month, 1) <= new Date()) {
+      fail("This card has expired.", 400);
+    }
+    if (!/^\d{3,4}$/.test(String(card.cvv || ""))) fail("Enter a valid CVV.", 400);
+    const saved = {
+      brand: cardBrand(number),
+      last4: number.slice(-4),
+      expMonth: month,
+      expYear: fullYear,
+      holder: String(card.holder).trim(),
+    };
+    state.savedCards[customerId] = saved;
+    return copy(saved);
+  });
+
+export const removeCard = (customerId) =>
+  respond(() => {
+    delete state.savedCards[customerId];
+    return null;
+  });
+
+// Charges the saved card for an order total. A declined card creates a FAILED record and rejects.
+export const chargeOrder = (customerId, customerName, { orderId = null, amount }) =>
+  respond(() => {
+    const card = state.savedCards[customerId];
+    if (!card) fail("Add a payment card first.", 402);
+    const declined = card.last4 === DECLINE_LAST4;
+    const payment = {
+      paymentId: state.nextPaymentId++,
+      orderId,
+      customerId,
+      customerName: customerName || "Customer",
+      method: "CARD",
+      brand: card.brand,
+      last4: card.last4,
+      amount: Number(amount),
+      currency: PRICING_CONFIG.currency,
+      status: declined ? "FAILED" : "PAID",
+      createdAt: new Date().toISOString(),
+      refundedAt: null,
+      failureReason: declined ? "Card declined." : null,
+    };
+    state.payments.push(payment);
+    if (declined) fail("Your card was declined. Order not placed.", 402);
+    return copy(payment);
+  });
+
+// Attaches the backend order id to a payment charged just before the order was created.
+export const attachPaymentToOrder = (paymentId, orderId) =>
+  respond(() => {
+    const payment = state.payments.find((p) => String(p.paymentId) === String(paymentId));
+    if (!payment) fail(`Payment ${paymentId} not found.`, 404);
+    payment.orderId = orderId;
+    return copy(payment);
+  });
+
+export const refundPayment = (paymentId) =>
+  respond(() => {
+    const payment = state.payments.find((p) => String(p.paymentId) === String(paymentId));
+    if (!payment) fail(`Payment ${paymentId} not found.`, 404);
+    if (payment.status !== "PAID") fail("Only a paid payment can be refunded.");
+    const order = state.orders.find((o) => o.id === payment.orderId);
+    if (order) {
+      if (order.status !== "DELIVERED") fail("Only delivered orders can be refunded.");
+      order.status = "REFUNDED";
+      addLedgerEntry(order, "REFUND", "REFUNDED");
+    }
+    payment.status = "REFUNDED";
+    payment.refundedAt = new Date().toISOString();
+    return copy(payment);
   });
 
 // --- Pricing ---

@@ -72,6 +72,49 @@ export function createSeed() {
   const subtotal = (o) => o.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveredOrder = orders.find((o) => o.id === 4);
 
+  // Payment records (see FOUNDATION.md). Seeded rows belong to the shared "demo" customer.
+  const card = { method: "CARD", brand: "VISA", last4: "4242", currency: "CAD" };
+  const payments = [
+    {
+      paymentId: 1,
+      orderId: 4,
+      customerId: "demo",
+      customerName: "Sam Customer",
+      ...card,
+      amount: calculateFare(subtotal(deliveredOrder)).total,
+      status: "PAID",
+      createdAt: ago(75 * MIN),
+      refundedAt: null,
+      failureReason: null,
+    },
+    {
+      paymentId: 2,
+      orderId: 5,
+      customerId: "demo",
+      customerName: "Sam Customer",
+      ...card,
+      amount: calculateFare(subtotal(orders.find((o) => o.id === 5))).total,
+      status: "PAID",
+      createdAt: ago(40 * MIN),
+      refundedAt: null,
+      failureReason: null,
+    },
+    {
+      paymentId: 3,
+      orderId: null,
+      customerId: "demo",
+      customerName: "Sam Customer",
+      ...card,
+      brand: "MASTERCARD",
+      last4: "0002",
+      amount: 14.49,
+      status: "FAILED",
+      createdAt: ago(3 * 60 * MIN),
+      refundedAt: null,
+      failureReason: "Card declined.",
+    },
+  ];
+
   return {
     restaurants,
     couriers,
@@ -88,6 +131,9 @@ export function createSeed() {
         currency: "CAD",
       },
     ],
+    payments,
+    savedCards: {},
+    nextPaymentId: 4,
     nextOrderId: 15,
     nextLedgerId: 2,
   };
