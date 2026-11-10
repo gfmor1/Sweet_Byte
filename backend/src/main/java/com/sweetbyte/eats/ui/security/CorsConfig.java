@@ -9,7 +9,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-// allows the Next.js app (app.cors.allowed-origins, default localhost:3000) to call the backend
+// allows the Next.js app (app.cors.allowed-origins, default localhost:3001) to call the backend
 // exposed as a CorsConfigurationSource so Spring Security applies it before checking tokens
 @Configuration
 public class CorsConfig {

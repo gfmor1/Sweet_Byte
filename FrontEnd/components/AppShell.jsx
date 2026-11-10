@@ -8,8 +8,6 @@ import OperatorDashboard from "../views/OperatorDashboard";
 import CourierDashboard from "../views/CourierDashboard";
 import CityMapLazy from "../features/map/CityMapLazy";
 import RestaurantDetails from "../features/map/RestaurantDetails";
-import OutputConsole from "./OutputConsole";
-import { useConsole } from "./ConsoleContext";
 import { getCouriers, getMapRestaurants } from "../services/dispatchApi";
 import { getRestaurantsWithQueues } from "../services/restaurantApi";
 import { applyRestaurantOverrides } from "../services/locationOverrides";
@@ -33,10 +31,8 @@ function renderDashboard(user, onLog) {
 }
 
 function AppShellContent({ user, onLogout }) {
-  const { log } = useConsole();
   const [restaurants, setRestaurants] = useState([]);
   const [couriers, setCouriers] = useState([]);
-  const lastMapError = useRef("");
   const refreshRef = useRef(() => {});
 
   const refreshMap = useCallback(async () => {
@@ -48,21 +44,10 @@ function AppShellContent({ user, onLogout }) {
       getCouriers(),
     ]);
 
-    // Log each failure once, not on every poll.
-    const failures = [
-      ["Load map restaurants", restaurantResult],
-      ["Load map couriers", courierResult],
-    ].filter(([, result]) => result.status === "rejected");
-    const errorKey = failures.map(([command, r]) => `${command}:${r.reason?.message}`).join("|");
-    if (errorKey !== lastMapError.current) {
-      lastMapError.current = errorKey;
-      failures.forEach(([command, r]) => log({ command, error: r.reason?.message || "Request failed" }));
-    }
-
     const restaurantList = restaurantResult.status === "fulfilled" ? restaurantResult.value : [];
     setRestaurants(applyRestaurantOverrides(restaurantList));
     setCouriers(courierResult.status === "fulfilled" ? courierResult.value : []);
-  }, [user, log]);
+  }, [user]);
 
   useEffect(() => {
     refreshRef.current = refreshMap;
@@ -71,14 +56,10 @@ function AppShellContent({ user, onLogout }) {
     return () => clearInterval(timer);
   }, [refreshMap]);
 
-  // Any successful command may have moved a courier or changed a status: refresh the map.
-  const handleLog = useCallback(
-    (entry) => {
-      log(entry);
-      if (entry?.result !== undefined && !entry.error) refreshRef.current();
-    },
-    [log]
-  );
+  // Dashboards report each command; a successful one may have moved a courier or changed a status: refresh the map.
+  const handleLog = useCallback((entry) => {
+    if (entry?.result !== undefined && !entry.error) refreshRef.current();
+  }, []);
 
   const { focus, extras } = useMapFocus();
   const [wholeCity, setWholeCity] = useState(false);
@@ -170,8 +151,6 @@ function AppShellContent({ user, onLogout }) {
           {renderDashboard(user, handleLog)}
         </main>
       </div>
-
-      <OutputConsole />
     </>
   );
 }

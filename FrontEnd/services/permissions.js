@@ -30,16 +30,11 @@ const RULES = {
     roles: [CUSTOMER],
     check: (ctx) => (ctx.orderStatus !== "PLACED" ? "Only a placed order can be cancelled." : null),
   },
-  // NOT_DELIVERED covers a courier who stole or lost the order after pickup.
   requestRefund: {
     roles: [CUSTOMER],
     check: (ctx) => {
       if (ctx.hasPendingRequest) return "A refund request is already pending for this order.";
-      if (ctx.orderStatus === "PICKED_UP") {
-        return ctx.refundReason === "UNSATISFIED" ? "This order has not been delivered yet." : null;
-      }
       if (ctx.orderStatus !== "DELIVERED") return "This order is not eligible for a refund.";
-      if (ctx.refundReason === "NOT_DELIVERED") return "This order was marked as delivered.";
       return Date.now() - Date.parse(ctx.deliveredAt) < REFUND_WINDOW_MS
         ? null
         : "The 1.5 hour refund window has passed.";

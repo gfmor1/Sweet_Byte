@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds and runs backend (:8080) and frontend (:3000). Usage: scripts/build-local.sh [--build-only]
+# Builds and runs backend (:8080) and frontend (:3001). Usage: scripts/build-local.sh [--build-only]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

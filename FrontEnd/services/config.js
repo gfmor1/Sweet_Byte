@@ -28,7 +28,7 @@ export function calculateFare(subtotal, config = PRICING_CONFIG) {
 // A delivered order can be the subject of a refund request for this long (UC-PRC-05).
 export const REFUND_WINDOW_MS = 90 * 60 * 1000;
 
+// Only delivered orders can be refunded: a picked-up order is always delivered (no stolen/lost orders).
 export const REFUND_REASONS = {
-  NOT_DELIVERED: "Order has not been delivered",
   UNSATISFIED: "Unsatisfied with order",
 };

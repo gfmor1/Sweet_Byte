@@ -22,7 +22,7 @@ order is marked ready --> system reads the stored location of all idle couriers 
 Regarding Reassignment:
 
 DRV-7 Reassign order (operator): only for orders whose courier accepted and then went offline before pickup. Reassignment only happens by operator command (R-DLV-02).
-A courier cannot go offline while carrying (R-DLV-03). An offer that was not yet accepted goes back to the queue when the courier goes off duty, it does not need reassigning.
+A courier cannot go offline while carrying (R-DLV-03): once an order is picked up, the courier cannot go offline until it is delivered. We assume no orders are stolen or lost, so every picked-up order is delivered. An offer that was not yet accepted goes back to the queue when the courier goes off duty, it does not need reassigning.
 
 Track delivery:
 DRV-8, delivery is tracked by polling the order status and the stored longitude and latitude of the courier who is either assigned (on their way to the restaurant) or carrying (from restaurant to customer)
@@ -46,15 +46,14 @@ Not to be confused with the preparation queue, which is per restaurant (R-ORD-03
 
 Refunds:
 
-Every order details has a request refund with two subcategories or reasons:
+Every delivered order's details has a request refund option, for one reason:
 
-1- Order has not been delivered (courier stole or lost the order after pickup)
-2- Unsatisfied with order (delivered less than 1.5 hours ago)
+- Unsatisfied with order (delivered less than 1.5 hours ago)
+
+Orders are never stolen or lost after pickup (see R-DLV-03 above), so only delivered orders can be refunded.
 
 Frontend: Every eligible order details has a request refund button with a form
 Backend: Every refund request has to be reviewed and verified by a system operator
-
-Deviation from the spec to confirm with the lab demonstrator: R-PRC-05 only allows refunded from delivered. Reason 1 adds picked_up --> refunded, which also needs a backend change (Order.refund() currently rejects it).
 
 
 
@@ -493,13 +492,13 @@ UC-PRC-05
 Title:
 Send Refund Order Request
 Description:
-In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
+In the case where a customer is dissatisfied with their delivered order, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator. Only delivered orders can be refunded.
 Primary Actor:
 Customer
 Preconditions:
 Customer is logged in
 Customer issued an order
-Order has been delivered less than 1.5 hours ago or Courier has either lost or not delivered the order
+Order has been delivered less than 1.5 hours ago
 Postconditions:
 Order refund request is issued to system operator
 Inputs:
@@ -532,7 +531,7 @@ UC-PRC-06
 Title:
 Accept Refund Order Request
 Description:
-In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
+In the case where a customer is dissatisfied with their delivered order, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator. Only delivered orders can be refunded.
 Primary Actor:
 System Operator
 Preconditions:
@@ -571,7 +570,7 @@ UC-PRC-07
 Title:
 Decline Refund Order Request
 Description:
-In the case where a customer is dissatisfied with their order or didn’t receive their orders, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator, for undelivered orders and delivered orders.
+In the case where a customer is dissatisfied with their delivered order, the customer can issue a refund request, which will be reviewed and then approved or declined by the system operator. Only delivered orders can be refunded.
 Primary Actor:
 System Operator
 Preconditions:
