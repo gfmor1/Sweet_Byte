@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.DeliveryOffer;
+import com.sweetbyte.eats.application.model.OperatorOverview;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 
@@ -23,4 +24,7 @@ public interface DispatchService {
     List<Order> getQueue(User user);
     List<Order> getStalledOrders(User user);
     Order reassign(Long orderId, User user);
+
+    // Every restaurant and order, for the operator dashboard
+    OperatorOverview getOverview(User user);
 }

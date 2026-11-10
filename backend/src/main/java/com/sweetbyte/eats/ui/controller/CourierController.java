@@ -17,6 +17,7 @@ import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.service.AuthService;
 import com.sweetbyte.eats.application.service.CourierService;
 import com.sweetbyte.eats.application.service.DispatchService;
+import com.sweetbyte.eats.ui.dto.ActiveDeliveryResponse;
 import com.sweetbyte.eats.ui.dto.CourierResponse;
 import com.sweetbyte.eats.ui.dto.DeliveryOfferResponse;
 import com.sweetbyte.eats.ui.dto.LocationRequest;
@@ -100,9 +101,9 @@ public class CourierController {
 
     // GET /api/couriers/me/delivery   -> the order the courier holds, or 204
     @GetMapping("/delivery")
-    public ResponseEntity<OrderResponse> activeDelivery(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<ActiveDeliveryResponse> activeDelivery(@AuthenticationPrincipal Jwt jwt) {
         return courierService.getActiveDelivery(currentUser(jwt))
-                .map(order -> ResponseEntity.ok(OrderResponse.from(order)))
+                .map(order -> ResponseEntity.ok(ActiveDeliveryResponse.from(order)))
                 .orElse(ResponseEntity.noContent().build());
     }
 

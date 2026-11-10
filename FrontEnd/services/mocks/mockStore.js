@@ -352,7 +352,7 @@ function refundView(request) {
 }
 
 export const getRefundableOrders = () =>
-  respond(() => copy(state.orders.filter((o) => ["PICKED_UP", "DELIVERED"].includes(o.status))));
+  respond(() => copy(state.orders.filter((o) => o.status === "DELIVERED")));
 
 export const getRefundRequests = () => respond(() => state.refundRequests.map(refundView));
 
@@ -387,14 +387,7 @@ export const acceptRefundRequest = (requestId) =>
     const request = findRefund(requestId);
     if (request.status !== "PENDING") fail("This request was already decided.");
     const order = findOrder(request.orderId);
-    if (!["DELIVERED", "PICKED_UP"].includes(order.status)) fail("This order can no longer be refunded.");
-    if (order.status === "PICKED_UP") {
-      // Stolen or lost: the order never got a charge entry, and the courier no longer holds it.
-      addLedgerEntry(order, "CHARGE", "PICKED_UP");
-      const courier = findCourier(order.courierId);
-      courier.status = "OFFLINE";
-      courier.currentOrderId = null;
-    }
+    if (order.status !== "DELIVERED") fail("This order can no longer be refunded.");
     order.status = "REFUNDED";
     addLedgerEntry(order, "REFUND", "REFUNDED");
     request.status = "ACCEPTED";

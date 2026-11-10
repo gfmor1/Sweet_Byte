@@ -17,11 +17,13 @@ import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.DeliveryOffer;
+import com.sweetbyte.eats.application.model.OperatorOverview;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.CourierRepository;
 import com.sweetbyte.eats.repository.persistence.DeliveryOfferRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
+import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 
 @Service
 public class DispatchServiceImpl implements DispatchService {
@@ -31,17 +33,20 @@ public class DispatchServiceImpl implements DispatchService {
     private final DeliveryOfferRepository offerRepository;
     private final DispatchRule dispatchRule;
     private final EventService eventService;
+    private final RestaurantRepository restaurantRepository;
 
     public DispatchServiceImpl(OrderRepository orderRepository,
                                CourierRepository courierRepository,
                                DeliveryOfferRepository offerRepository,
                                DispatchRule dispatchRule,
-                               EventService eventService) {
+                               EventService eventService,
+                               RestaurantRepository restaurantRepository) {
         this.orderRepository = orderRepository;
         this.courierRepository = courierRepository;
         this.offerRepository = offerRepository;
         this.dispatchRule = dispatchRule;
         this.eventService = eventService;
+        this.restaurantRepository = restaurantRepository;
     }
  
     @Override
@@ -183,6 +188,13 @@ public class DispatchServiceImpl implements DispatchService {
                 "Released from order " + orderId + " by operator");
         tryOffer(saved, user);
         return saved;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OperatorOverview getOverview(User user) {
+        requireOperator(user);
+        return new OperatorOverview(restaurantRepository.findAll(), orderRepository.findAllByOrderByOrderIdDesc());
     }
 
     private DeliveryOffer findPendingOffer(Courier courier, Long orderId) {

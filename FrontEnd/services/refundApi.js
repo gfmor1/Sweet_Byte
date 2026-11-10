@@ -10,7 +10,7 @@ import { getMyOrders } from "./orderApi";
 export async function getRefundableOrders() {
   if (useMocks) return mockStore.getRefundableOrders();
   const orders = await getMyOrders();
-  return orders.filter((order) => ["PICKED_UP", "DELIVERED"].includes(order.status));
+  return orders.filter((order) => order.status === "DELIVERED");
 }
 
 // The backend must scope this by role: own requests for a customer or restaurant, all for an operator.

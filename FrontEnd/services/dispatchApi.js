@@ -9,8 +9,20 @@ export function getCouriers() {
 }
 
 // READY orders still waiting for an idle courier, oldest first
-export function getDispatchQueue() {
-  return useMocks ? mockStore.getDispatchQueue() : apiRequest("/api/dispatch/queue");
+// Backend returns orders; waitingSeconds is derived from readyAt.
+export async function getDispatchQueue() {
+  if (useMocks) return mockStore.getDispatchQueue();
+  const orders = await apiRequest("/api/dispatch/queue");
+  const now = Date.now();
+  return (orders || []).map((order) => ({
+    orderId: order.orderId,
+    restaurantId: order.restaurantId,
+    restaurantName: order.restaurantName,
+    readyAt: order.readyAt,
+    waitingSeconds: order.readyAt
+      ? Math.max(0, Math.round((now - Date.parse(order.readyAt)) / 1000))
+      : undefined,
+  }));
 }
 
 // Restaurants with coordinates (and queueSize when known) for the city map

@@ -7,10 +7,8 @@ import Register from "./views/Register";
 import { getCurrentUser, logout, onSignedOut } from "./services/authApi";
 import LoadingBar from "./components/LoadingBar";
 import AppShell from "./components/AppShell";
-import { ConsoleProvider, useConsole } from "./components/ConsoleContext";
 
 function AppContent() {
-  const { clear } = useConsole();
   const [page, setPage] = useState("login");
   const [user, setUser] = useState(null);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -36,7 +34,6 @@ function AppContent() {
 
   async function handleLogout() {
     await logout();
-    clear();
     setUser(null);
     setPage("login");
   }
@@ -96,9 +93,7 @@ function AppContent() {
 
 function App() {
   return (
-    <ConsoleProvider>
-      <AppContent />
-    </ConsoleProvider>
+    <AppContent />
   );
 }
 

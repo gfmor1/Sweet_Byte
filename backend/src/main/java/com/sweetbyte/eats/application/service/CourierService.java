@@ -1,5 +1,6 @@
 package com.sweetbyte.eats.application.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import com.sweetbyte.eats.application.model.Courier;
@@ -14,4 +15,7 @@ public interface CourierService {
     Order confirmPickup(Long orderId, User user);
     Order confirmDelivery(Long orderId, User user);
     Optional<Order> getActiveDelivery(User user);
+
+    // Every role sees on-duty couriers on the map (R-DASH-02); OFFLINE ones included, the map hides them
+    List<Courier> listCouriers();
 }

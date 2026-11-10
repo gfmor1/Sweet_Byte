@@ -26,15 +26,21 @@ public class CourierServiceImpl implements CourierService {
     private final OrderRepository orderRepository;
     private final DispatchService dispatchService;
     private final EventService eventService;
+    private final PricingService pricingService;
+    private final LedgerService ledgerService;
 
     public CourierServiceImpl(CourierRepository courierRepository,
                               OrderRepository orderRepository,
                               DispatchService dispatchService,
-                              EventService eventService) {
+                              EventService eventService,
+                              PricingService pricingService,
+                              LedgerService ledgerService) {
         this.courierRepository = courierRepository;
         this.orderRepository = orderRepository;
         this.dispatchService = dispatchService;
         this.eventService = eventService;
+        this.pricingService = pricingService;
+        this.ledgerService = ledgerService;
     }
 
     @Override
@@ -89,6 +95,8 @@ public class CourierServiceImpl implements CourierService {
         Order order = findOrder(orderId);
         order.pickUp(courier);
         courier.pickUp();
+        // simulated position: the courier is now at the restaurant
+        courier.updateLocation(order.getRestaurant().getLatitude(), order.getRestaurant().getLongitude());
         courierRepository.save(courier);
         Order saved = orderRepository.save(order);
         eventService.record("Order", orderId, OrderStatus.READY, OrderStatus.PICKED_UP, user, null);
@@ -104,8 +112,12 @@ public class CourierServiceImpl implements CourierService {
         Order order = findOrder(orderId);
         order.deliver(courier);
         courier.finishDelivery();
+        // simulated position: the courier is now at the drop-off
+        courier.updateLocation(order.getCustomer().getLatitude(), order.getCustomer().getLongitude());
         courierRepository.save(courier);
         Order saved = orderRepository.save(order);
+        pricingService.recordFare(saved);           // idempotent; orders placed before billing was wired have none
+        ledgerService.recordFinalState(saved);
         eventService.record("Order", orderId, OrderStatus.PICKED_UP, OrderStatus.DELIVERED, user, null);
         eventService.record("Courier", courier.getUserId(), CourierStatus.CARRYING, CourierStatus.IDLE, user,
                 "Order " + orderId);
@@ -117,7 +129,13 @@ public class CourierServiceImpl implements CourierService {
     @Transactional(readOnly = true)
     public Optional<Order> getActiveDelivery(User user) {
         Courier courier = requireCourier(user);
-        return orderRepository.findFirstByCourierUserIdAndStatusIn(courier.getUserId(), HELD);
+        return orderRepository.findByCourierUserIdAndStatusIn(courier.getUserId(), HELD);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Courier> listCouriers() {
+        return courierRepository.findAll();
     }
 
     private Courier requireCourier(User user) {
@@ -129,7 +147,8 @@ public class CourierServiceImpl implements CourierService {
     }
 
     private Order findOrder(Long orderId) {
-        return orderRepository.findById(orderId)
+        // with the customer: delivery reads the drop-off position
+        return orderRepository.findWithDeliveryDetailsByOrderId(orderId)
                 .orElseThrow(() -> new NotFoundException("Order", orderId));
     }
 }

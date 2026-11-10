@@ -33,8 +33,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     public Optional<Order> findFirstByCourierUserIdAndStatusIn(Long userId, List<OrderStatus> held);
 
+    @EntityGraph(attributePaths = {"restaurant", "courier", "lines", "lines.item"})
     public List<Order> findByStatusAndCourierIsNullOrderByReadyAtAscArrivalSeqAsc(OrderStatus status);
 
+    @EntityGraph(attributePaths = {"restaurant", "courier", "lines", "lines.item"})
     public List<Order> findByStatusAndCourier_Status(OrderStatus ready, CourierStatus offline);
 
     // Delivery views also read the customer (drop-off position, name)
@@ -48,5 +50,4 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @EntityGraph(attributePaths = {"restaurant", "customer", "courier", "lines", "lines.item"})
     public List<Order> findAllByOrderByOrderIdDesc();
 
-    public List<Order> findByStatusAndCourierIsNullOrderByReadyAtAsc(OrderStatus status);
 }

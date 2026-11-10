@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.service.AuthService;
+import com.sweetbyte.eats.application.service.CourierService;
 import com.sweetbyte.eats.application.service.DispatchService;
+import com.sweetbyte.eats.ui.dto.CourierResponse;
 import com.sweetbyte.eats.ui.dto.OrderResponse;
 
 // DLV, operator side: see what waits for a courier, and reassign (R-DLV-02, R-DLV-04).
@@ -22,11 +24,20 @@ import com.sweetbyte.eats.ui.dto.OrderResponse;
 public class DispatchController {
 
     private final DispatchService dispatchService;
+    private final CourierService courierService;
     private final AuthService authService;
 
-    public DispatchController(DispatchService dispatchService, AuthService authService) {
+    public DispatchController(DispatchService dispatchService, CourierService courierService,
+                              AuthService authService) {
         this.dispatchService = dispatchService;
+        this.courierService = courierService;
         this.authService = authService;
+    }
+
+    // GET /api/dispatch/couriers   every role sees couriers on the map (R-DASH-02)
+    @GetMapping("/couriers")
+    public List<CourierResponse> couriers() {
+        return courierService.listCouriers().stream().map(CourierResponse::from).toList();
     }
 
     // GET /api/dispatch/queue

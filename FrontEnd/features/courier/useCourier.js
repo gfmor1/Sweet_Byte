@@ -46,10 +46,15 @@ export default function useCourier(onLog) {
   const inFlight = useRef(false);
   const commandRunning = useRef(false);
   const logRef = useRef(onLog);
+  const offerRef = useRef(null);
 
   useEffect(() => {
     logRef.current = onLog;
   }, [onLog]);
+
+  useEffect(() => {
+    offerRef.current = offer;
+  }, [offer]);
 
   const refresh = useCallback(async () => {
     if (inFlight.current) return;
@@ -99,7 +104,8 @@ export default function useCourier(onLog) {
       setError("");
       logRef.current?.({ command });
       try {
-        const updated = await action();
+        // Order commands need the current order's id; duty commands ignore it.
+        const updated = await action(offerRef.current?.orderId);
         // Invalidate any in-flight poll so its older data is ignored.
         version.current++;
         inFlight.current = false;
