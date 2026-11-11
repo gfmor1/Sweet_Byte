@@ -26,6 +26,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderPermissionResolver permissionResolver;
     private final DispatchService dispatchService; 
     private final PricingService pricingService;
+    private final CreditRefundService creditRefundService;
 
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
@@ -33,8 +34,10 @@ public class OrderServiceImpl implements OrderService {
         EventService eventService,
         OrderPermissionResolver permissionResolver,
         DispatchService dispatchService,
-        PricingService pricingService) {
+        PricingService pricingService,
+        CreditRefundService creditRefundService) {
         this.pricingService = pricingService;
+        this.creditRefundService = creditRefundService;
         this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
@@ -108,6 +111,7 @@ public class OrderServiceImpl implements OrderService {
         order.reject(reason);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, reason);
+        creditRefundService.refund(saved, reason, user);    // Automatic Credit Refund: customer paid at placement
         return saved;
     }
 
@@ -146,6 +150,7 @@ public class OrderServiceImpl implements OrderService {
         }
         orderRepository.save(order);
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
+        creditRefundService.refund(order, "Order cancelled", user);    // Automatic Credit Refund
     }
 
 
