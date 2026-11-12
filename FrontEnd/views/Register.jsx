@@ -10,7 +10,6 @@ function Register({ onRegisterSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [restaurantName, setRestaurantName] = useState("");
   const [status, show] = useStatus();
   const [submitting, setSubmitting] = useState(false);
@@ -27,7 +26,7 @@ function Register({ onRegisterSuccess }) {
     show.clear();
     try {
       // 1. Supabase account (gives the JWT), 2. SweetByte account for the chosen role
-      const registration = { role, name, deliveryAddress, restaurantName };
+     const registration = { role, name, restaurantName };
       const loggedIn = await signUp(email, password, registration);
       if (!loggedIn) {
         // "Confirm email" is on: the first login after confirming finishes step 2
@@ -88,16 +87,7 @@ function Register({ onRegisterSuccess }) {
           required
         />
 
-        {role === "CUSTOMER" && (
-          <input
-            type="text"
-            placeholder="Delivery Address"
-            value={deliveryAddress}
-            onChange={(event) => setDeliveryAddress(event.target.value)}
-            required
-          />
-        )}
-
+        
         {role === "RESTAURANT_OWNER" && (
           <input
             type="text"

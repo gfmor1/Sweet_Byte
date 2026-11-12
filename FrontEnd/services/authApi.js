@@ -55,10 +55,10 @@ async function loadProfile(supabaseUser) {
   }
 }
 
-export function registerCustomer({ name, deliveryAddress }) {
+export function registerCustomer({ name }) {
   return apiRequest("/api/auth/register/customer", {
     method: "POST",
-    body: { name, deliveryAddress }
+    body: { name }
   });
 }
 
