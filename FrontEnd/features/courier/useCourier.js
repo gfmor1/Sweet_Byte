@@ -95,7 +95,7 @@ export default function useCourier(onLog) {
   }, [refresh]);
 
   const runCommand = useCallback(
-    async (command) => {
+    async (command, argument) => {
       const action = COMMANDS[command];
       if (!action || commandRunning.current) return;
       commandRunning.current = true;
@@ -104,8 +104,10 @@ export default function useCourier(onLog) {
       setError("");
       logRef.current?.({ command });
       try {
-        // Order commands need the current order's id; duty commands ignore it.
-        const updated = await action(offerRef.current?.orderId);
+        // Order commands need the current order's id; "Go on duty" gets the courier's location.
+        const updated = await action(
+          argument !== undefined ? argument : offerRef.current?.orderId
+        );
         // Invalidate any in-flight poll so its older data is ignored.
         version.current++;
         inFlight.current = false;

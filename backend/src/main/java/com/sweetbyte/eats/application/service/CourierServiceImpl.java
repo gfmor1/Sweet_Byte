@@ -51,9 +51,10 @@ public class CourierServiceImpl implements CourierService {
 
     @Override
     @Transactional
-    public Courier goOnDuty(User user) {
+    public Courier goOnDuty(User user, double latitude, double longitude) {
         Courier courier = requireCourier(user);
-        courier.goOnline();
+        courier.goOnline();                                      // OFFLINE -> IDLE, throws otherwise
+        courier.updateLocation(latitude, longitude);             // fresh position before dispatch sees it
         courierRepository.save(courier);
         eventService.record("Courier", courier.getUserId(), CourierStatus.OFFLINE, CourierStatus.IDLE, user, null);
         dispatchService.retryQueue(user);                        // R-DLV-04: a courier became idle

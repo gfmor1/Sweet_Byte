@@ -170,10 +170,13 @@ export const getRestaurants = () => respond(() => state.restaurants.map(restaura
 
 export const courierGetMe = () => respond(() => courierView(findCourier(actingCourierId)));
 
-export const courierGoOnDuty = () =>
+export const courierGoOnDuty = (location) =>
   respond(() => {
     const courier = findCourier(actingCourierId);
     if (courier.status !== "OFFLINE") fail("You are already on duty.");
+    if (!location) fail("Set your current location before going on duty.", 400);
+    courier.latitude = location.latitude;
+    courier.longitude = location.longitude;
     // A courier who still holds an accepted order resumes it.
     if (courier.currentOrderId !== null) courier.status = "ASSIGNED";
     else makeIdle(courier);

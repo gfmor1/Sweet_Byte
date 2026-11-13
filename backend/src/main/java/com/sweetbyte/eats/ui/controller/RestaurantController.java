@@ -49,6 +49,17 @@ public class RestaurantController {
         return RestaurantResponse.from(restaurantService.reOpenRestaurant(restaurantId, currentUser(jwt)));
     }
 
+    // UC I: the owner sets the restaurant's address
+    // body: { "address": "...", "latitude": 45.497, "longitude": -73.579 }
+    @PatchMapping("/{restaurantId}/location")
+    public RestaurantResponse relocate(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId,
+                                       @RequestBody RestaurantLocationRequest body) {
+        if (body == null || body.latitude() == null || body.longitude() == null)
+            throw new IllegalArgumentException("An address with its coordinates is required");
+        return RestaurantResponse.from(restaurantService.relocateRestaurant(
+                restaurantId, body.address(), body.latitude(), body.longitude(), currentUser(jwt)));
+    }
+
     //UC I step 2
     @PatchMapping("/{restaurantId}/status")
     public RestaurantResponse changeStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long restaurantId,

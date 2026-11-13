@@ -278,15 +278,16 @@ function RestaurantDashboard({ restaurantId, onLog }) {
     );
   }
 
-  // Resolves true on success so the settings panel can end map picking
-  async function handleSaveLocation(latitude, longitude) {
+  // location: { address, latitude, longitude }. Resolves true on success so the panel can reset.
+  async function handleSaveLocation(location) {
+    const { address, latitude, longitude } = location;
     const command = "Set restaurant location";
     version.current += 1;
     setBusy(true);
     log({ command });
     try {
-      const { saved } = await updateRestaurantLocation(restaurantId, latitude, longitude);
-      setRestaurant((previous) => ({ ...previous, latitude, longitude }));
+      const { saved } = await updateRestaurantLocation(restaurantId, { address, latitude, longitude });
+      setRestaurant((previous) => ({ ...previous, address, latitude, longitude }));
       show.success(
         saved === "local"
           ? "Saved in this browser only — the server has no location endpoint yet"

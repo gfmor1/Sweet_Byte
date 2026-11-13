@@ -9,7 +9,8 @@ import com.sweetbyte.eats.application.model.User;
 
 public interface CourierService {
     Courier getMe(User user);
-    Courier goOnDuty(User user);
+    // The courier gives their current position: dispatch picks the nearest IDLE courier.
+    Courier goOnDuty(User user, double latitude, double longitude);
     Courier goOffDuty(User user);
     Courier updateLocation(User user, double latitude, double longitude);
     Order confirmPickup(Long orderId, User user);

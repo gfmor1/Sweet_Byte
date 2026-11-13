@@ -17,6 +17,7 @@ function toRestaurant(restaurant) {
     status: restaurant.status,
     latitude: restaurant.latitude,
     longitude: restaurant.longitude,
+    address: restaurant.address,
     queueSize: restaurant.queueSize
   };
 }

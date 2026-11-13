@@ -62,8 +62,21 @@ export function getMe() {
   return useMocks ? mockStore.courierGetMe() : apiRequest(BASE);
 }
 
-export function goOnDuty() {
-  return useMocks ? mockStore.courierGoOnDuty() : apiRequest(`${BASE}/on-duty`, { method: "POST" });
+// location: { latitude, longitude } -- required, dispatch offers orders to the nearest idle courier.
+export function goOnDuty(location) {
+  const latitude = Number(location?.latitude);
+  const longitude = Number(location?.longitude);
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    Math.abs(latitude) > 90 ||
+    Math.abs(longitude) > 180
+  ) {
+    return Promise.reject(new Error("Set your current location before going on duty."));
+  }
+  return useMocks
+    ? mockStore.courierGoOnDuty({ latitude, longitude })
+    : apiRequest(`${BASE}/on-duty`, { method: "POST", body: { latitude, longitude } });
 }
 
 export function goOffDuty() {

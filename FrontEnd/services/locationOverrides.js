@@ -69,3 +69,11 @@ export function applyRestaurantOverrides(restaurants) {
     return override ? { ...restaurant, ...override } : restaurant;
   });
 }
+
+// Once the server has the location, drop the browser copy so it no longer hides the real one.
+export function clearRestaurantOverride(restaurantId) {
+  const overrides = { ...getRestaurantOverrides() };
+  if (!(String(restaurantId) in overrides)) return;
+  delete overrides[String(restaurantId)];
+  write(RESTAURANT_KEY, overrides);
+}

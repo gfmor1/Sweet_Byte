@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMapFocus } from "../../components/MapFocusContext";
+import DeliveryAddressPicker from "../customer/DeliveryAddressPicker";
+import { reverseGeocode } from "../../services/geocodeApi";
 import { formatEnum } from "../../services/enumApi";
 import { explain, ROLES } from "../../services/permissions";
 import styles from "./restaurant.module.css";
@@ -40,53 +42,77 @@ function RestaurantSettings({
   onSaveLocation
 }) {
   const { setExtras } = useMapFocus();
-  const [picking, setPicking] = useState(false);
-  const [draft, setDraft] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(null); // { address, latitude, longitude }
+  const [lookingUp, setLookingUp] = useState(false);
+  const [pickerKey, setPickerKey] = useState(0);
   const [error, setError] = useState("");
+  const lastClick = useRef(0);
 
   // Always release the shared map when leaving this tab / view
   useEffect(() => () => setExtras({ picker: null }), [setExtras]);
 
-  // Keep the map picker in sync with the draft while picking
+  // While editing, a map click also sets the address (looked up from the clicked point)
   useEffect(() => {
-    if (!picking) return;
+    if (!editing) return;
     setExtras({
       picker: {
         kind: "restaurant",
-        label: "Click the map to place your restaurant",
-        point: draft || undefined,
-        onPick: (latitude, longitude) => {
-          setError("");
-          setDraft({ latitude, longitude });
-        }
+        label: "Click the map to place your restaurant, or search the address",
+        point: draft ? { latitude: draft.latitude, longitude: draft.longitude } : undefined,
+        onPick: (latitude, longitude) => pickOnMap(latitude, longitude)
       }
     });
-  }, [picking, draft, setExtras]);
+    // pickOnMap only uses setters and refs, so it is safe to leave out of the deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, draft, setExtras]);
 
-  function startPicking() {
-    const lat = Number(restaurant.latitude);
-    const lng = Number(restaurant.longitude);
-    const hasCurrent =
-      restaurant.latitude != null && restaurant.longitude != null && validCoords(lat, lng);
-    setDraft(hasCurrent ? { latitude: lat, longitude: lng } : null);
+  async function pickOnMap(latitude, longitude) {
+    const click = ++lastClick.current;
     setError("");
-    setPicking(true);
+    setPickerKey((key) => key + 1); // clear the address search results
+    setDraft({ address: null, latitude, longitude });
+    setLookingUp(true);
+    const address = await reverseGeocode(latitude, longitude);
+    if (click !== lastClick.current) return; // a newer click won
+    setLookingUp(false);
+    setDraft({ address, latitude, longitude });
   }
 
-  function stopPicking() {
-    setPicking(false);
+  function startEditing() {
     setDraft(null);
+    setError("");
+    setEditing(true);
+  }
+
+  function stopEditing() {
+    lastClick.current++;
+    setEditing(false);
+    setDraft(null);
+    setLookingUp(false);
     setError("");
     setExtras({ picker: null });
   }
 
+  // The picker geocodes the typed address; it reports null until a result is chosen.
+  function pickAddress(result) {
+    lastClick.current++; // cancel a pending map-click lookup
+    setLookingUp(false);
+    setError("");
+    setDraft(
+      result
+        ? { address: result.deliveryAddress, latitude: result.latitude, longitude: result.longitude }
+        : null
+    );
+  }
+
   async function save() {
-    if (!draft || !validCoords(draft.latitude, draft.longitude)) {
-      setError("Click the map to choose a valid location first.");
+    if (!draft || !draft.address || !validCoords(draft.latitude, draft.longitude)) {
+      setError("Search your address or click the map first.");
       return;
     }
-    const ok = await onSaveLocation(draft.latitude, draft.longitude);
-    if (ok) stopPicking();
+    const ok = await onSaveLocation(draft);
+    if (ok) stopEditing();
   }
 
   return (
@@ -142,42 +168,45 @@ function RestaurantSettings({
         </h4>
         <dl className={styles.settingsList}>
           <div>
-            <dt>Latitude</dt>
-            <dd>{formatCoord(restaurant.latitude)}</dd>
+            <dt>Address</dt>
+            <dd>{restaurant.address || "Not set"}</dd>
           </div>
           <div>
-            <dt>Longitude</dt>
-            <dd>{formatCoord(restaurant.longitude)}</dd>
+            <dt>Coordinates</dt>
+            <dd>
+              {formatCoord(restaurant.latitude)}, {formatCoord(restaurant.longitude)}
+            </dd>
           </div>
-          {picking && (
-            <div>
-              <dt>New location</dt>
-              <dd>
-                {draft
-                  ? `${draft.latitude.toFixed(5)}, ${draft.longitude.toFixed(5)}`
-                  : "Click the map to choose"}
-              </dd>
-            </div>
-          )}
         </dl>
 
-        {!picking ? (
+        {!editing ? (
           <div className={styles.actions}>
             <button
               type="button"
               className="btn-secondary"
-              onClick={startPicking}
+              onClick={startEditing}
               disabled={busy}
-              aria-label="Set restaurant location on the map"
             >
-              Set on map
+              {restaurant.address ? "Change address" : "Set address"}
             </button>
           </div>
         ) : (
           <>
-            <p className={styles.meta} id="location-help">
-              Click the map to place your restaurant, then save.
+            <p className={styles.meta}>
+              Search your address below, or click your restaurant&apos;s spot on the map.
             </p>
+            <DeliveryAddressPicker
+              key={pickerKey}
+              legend="Restaurant address"
+              showUnit={false}
+              disabled={busy}
+              onChange={pickAddress}
+            />
+            {draft && (
+              <p className={styles.meta}>
+                New address: {lookingUp ? "Looking up the address..." : draft.address}
+              </p>
+            )}
             {error && (
               <p className={styles.fieldError} role="alert">
                 {error}
@@ -188,15 +217,14 @@ function RestaurantSettings({
                 type="button"
                 className="btn-secondary"
                 onClick={save}
-                disabled={busy || !draft}
-                aria-describedby="location-help"
+                disabled={busy || !draft || lookingUp}
               >
-                Save location
+                Save address
               </button>
               <button
                 type="button"
                 className="btn-secondary"
-                onClick={stopPicking}
+                onClick={stopEditing}
                 disabled={busy}
               >
                 Cancel

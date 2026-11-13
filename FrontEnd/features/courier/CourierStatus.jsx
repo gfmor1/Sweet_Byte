@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { can, explain } from "../../services/permissions";
 import styles from "./courier.module.css";
+import OnDutyLocation from "./OnDutyLocation";
 
 const ROLE = "COURIER";
 
@@ -15,7 +16,7 @@ const HINTS = {
 };
 
 const CAN_DO = [
-  "Go on or off duty.",
+  "Go on duty (from your current location) or off duty.",
   "Accept or decline the order offered to you.",
   "Confirm pickup at the restaurant.",
   "Confirm delivery at the drop-off.",
@@ -23,6 +24,7 @@ const CAN_DO = [
 
 export default function CourierStatus({ courier, offer, busy, onCommand }) {
   const [confirmOff, setConfirmOff] = useState(false);
+  const [askLocation, setAskLocation] = useState(false);
 
   const status = courier?.status || "OFFLINE";
   const onDuty = status !== "OFFLINE";
@@ -42,7 +44,17 @@ export default function CourierStatus({ courier, offer, busy, onCommand }) {
       setConfirmOff(true);
       return;
     }
+    // Going on duty needs the courier's current position first.
+    if (!onDuty) {
+      setAskLocation(true);
+      return;
+    }
     onCommand(label);
+  }
+
+  async function goOnDutyAt(location) {
+    setAskLocation(false);
+    await onCommand("Go on duty", location);
   }
 
   async function confirmOffDuty() {
@@ -79,6 +91,14 @@ export default function CourierStatus({ courier, offer, busy, onCommand }) {
           </button>
           <span className={styles.hint}>{label} to switch.</span>
         </div>
+
+        {askLocation && !onDuty && (
+          <OnDutyLocation
+            busy={busy}
+            onConfirm={goOnDutyAt}
+            onCancel={() => setAskLocation(false)}
+          />
+        )}
 
         {confirmOff && status === "ASSIGNED" && (
           <div className={styles.warning} role="alert">

@@ -59,6 +59,14 @@ public class RestaurantServiceImpl implements RestaurantService{
     }
 
     @Override
+    public Restaurant relocateRestaurant(Long restaurantID, String address, double latitude, double longitude, User user){
+        permissionResolver.requireManageRestaurant(user, restaurantID);
+        Restaurant restaurant = getRestaurantByID(restaurantID);
+        restaurant.relocate(address, latitude, longitude);   // validates address + coordinates
+        return restaurantRepository.save(restaurant);
+    }
+
+    @Override
     public Restaurant reOpenRestaurant(Long restaurantID, User user){
         permissionResolver.requireManageRestaurant(user,restaurantID); //refactored with strategy method
 

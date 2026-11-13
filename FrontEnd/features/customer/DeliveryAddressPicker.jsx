@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 
 export default function DeliveryAddressPicker({
   onChange,
-  disabled = false
+  disabled = false,
+  legend = "Delivery address",
+  showUnit = true
 }) {
   const [query, setQuery] = useState("");
   const [unit, setUnit] = useState("");
@@ -136,7 +138,7 @@ export default function DeliveryAddressPicker({
 
   return (
     <fieldset disabled={disabled} style={{ margin: "1rem 0" }}>
-      <legend>Delivery address</legend>
+      <legend>{legend}</legend>
 
       <label htmlFor="delivery-search">
         Street number, street name and city
@@ -195,22 +197,26 @@ export default function DeliveryAddressPicker({
         </label>
       ))}
 
-      <label htmlFor="delivery-unit">
-        Apartment / unit (optional)
-      </label>
+      {showUnit && (
+        <>
+          <label htmlFor="delivery-unit">
+            Apartment / unit (optional)
+          </label>
 
-      <input
-        id="delivery-unit"
-        value={unit}
-        maxLength={50}
-        autoComplete="address-line2"
-        onChange={(event) => {
-          setUnit(event.target.value);
-          updateDelivery(selected, event.target.value);
-        }}
-      />
+          <input
+            id="delivery-unit"
+            value={unit}
+            maxLength={50}
+            autoComplete="address-line2"
+            onChange={(event) => {
+              setUnit(event.target.value);
+              updateDelivery(selected, event.target.value);
+            }}
+          />
+        </>
+      )}
 
-      {selected && (
+      {selected && showUnit && (
         <p>
           Deliver to: {selected.deliveryAddress}
           {unit.trim() ? `, Unit ${unit.trim()}` : ""}

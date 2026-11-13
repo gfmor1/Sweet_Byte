@@ -21,6 +21,7 @@ import com.sweetbyte.eats.ui.dto.ActiveDeliveryResponse;
 import com.sweetbyte.eats.ui.dto.CourierResponse;
 import com.sweetbyte.eats.ui.dto.DeliveryOfferResponse;
 import com.sweetbyte.eats.ui.dto.LocationRequest;
+import com.sweetbyte.eats.ui.dto.OnDutyRequest;
 import com.sweetbyte.eats.ui.dto.OrderResponse;
 
 // DLV: everything the connected courier does. No business logic here.
@@ -47,9 +48,14 @@ public class CourierController {
     }
 
     // POST /api/couriers/me/on-duty
+    // body: { "latitude": 45.50, "longitude": -73.57 }  required, the courier's current position
     @PostMapping("/on-duty")
-    public CourierResponse goOnDuty(@AuthenticationPrincipal Jwt jwt) {
-        return CourierResponse.from(courierService.goOnDuty(currentUser(jwt)));
+    public CourierResponse goOnDuty(@RequestBody(required = false) OnDutyRequest request,
+                                    @AuthenticationPrincipal Jwt jwt) {
+        if (request == null || request.latitude() == null || request.longitude() == null)
+            throw new IllegalArgumentException("Your current location is required to go on duty");
+        return CourierResponse.from(courierService.goOnDuty(
+                currentUser(jwt), request.latitude(), request.longitude()));
     }
 
     // POST /api/couriers/me/off-duty

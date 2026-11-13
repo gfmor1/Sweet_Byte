@@ -350,6 +350,10 @@ export default function CustomerDashboard({ user, onLog }) {
       setMessage(`Order #${order.id} placed successfully.`);
       setRefreshKey((previous) => previous + 1);
 
+      // Back to the main screen: the list of all restaurants.
+      backToRestaurants();
+      setActiveTab("restaurants");
+
       await refresh();
 
       return true;
