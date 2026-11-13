@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { REFUND_REASONS, useMocks } from "../../services/config";
 import { can } from "../../services/permissions";
-import { getRefundableOrders, submitRefundRequest } from "../../services/refundApi";
+import {
+  getRefundEntriesByOrder,
+  getRefundableOrders,
+  submitRefundRequest,
+} from "../../services/refundApi";
 import RefundRequestsList from "./RefundRequestsList";
 import useRefundRequests from "./useRefundRequests";
 
@@ -21,6 +25,7 @@ export default function RefundPanel({ onLog }) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [refunds, setRefunds] = useState({});
 
   const logRef = useRef(onLog);
   logRef.current = onLog;
@@ -45,9 +50,25 @@ export default function RefundPanel({ onLog }) {
     };
   }, [requestsKey]);
 
+  // REFUND ledger entries, shown on accepted requests
+  useEffect(() => {
+    let active = true;
+    getRefundEntriesByOrder()
+      .then((byOrder) => {
+        if (active) setRefunds(byOrder);
+      })
+      .catch((err) => {
+        if (active) logRef.current?.({ command: "Load refunds", error: err.message });
+      });
+    return () => {
+      active = false;
+    };
+  }, [requestsKey]);
+
   function allowedReasons(order) {
+    // One request per order (backend rule): a decided request also blocks a new one.
     const hasPendingRequest = requests.some(
-      (request) => String(request.orderId) === String(order.id) && request.status === "PENDING"
+      (request) => String(request.orderId) === String(order.id)
     );
     return Object.keys(REFUND_REASONS).filter((refundReason) =>
       can(ROLE, "requestRefund", {
@@ -152,7 +173,7 @@ export default function RefundPanel({ onLog }) {
 
       <h2 style={{ fontSize: "1.15rem" }}>My refund requests</h2>
       {requestsError && <p role="alert">{requestsError}</p>}
-      <RefundRequestsList requests={requests} emptyText="No refund requests yet." />
+      <RefundRequestsList requests={requests} refunds={refunds} emptyText="No refund requests yet." />
     </section>
   );
 }

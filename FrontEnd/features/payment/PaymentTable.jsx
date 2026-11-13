@@ -11,7 +11,6 @@ const FILTERS = [
   { id: "ALL", label: "All" },
   { id: "PAID", label: "Paid" },
   { id: "REFUNDED", label: "Refunded" },
-  { id: "FAILED", label: "Failed" },
 ];
 
 // showCustomer + onRefund are operator-only (R-DASH-04/05 via permissions.can).

@@ -161,10 +161,10 @@ export default function OperatorDashboard({ user, onLog }) {
               `Order #${r.orderId} refunded.`
             )
           }
-          onDecline={(r) =>
+          onDecline={(r, note) =>
             runCommand(
               `Decline refund request #${r.id}`,
-              () => declineRefundRequest(r.id),
+              () => declineRefundRequest(r.id, note),
               `Refund request for order #${r.orderId} declined.`
             )
           }

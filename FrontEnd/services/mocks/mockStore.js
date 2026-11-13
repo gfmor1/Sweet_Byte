@@ -321,7 +321,6 @@ export const resetSystem = () =>
 // --- Payments (mock; the backend owns real payment data) ---
 
 const DEMO_CUSTOMER = "demo";
-const DECLINE_LAST4 = "0002"; // test card 4000 0000 0000 0002 is always declined
 
 function markPaymentRefunded(orderId) {
   const payment = state.payments.find((p) => p.orderId === orderId && p.status === "PAID");
@@ -386,12 +385,11 @@ export const removeCard = (customerId) =>
     return null;
   });
 
-// Charges the saved card for an order total. A declined card creates a FAILED record and rejects.
+// Charges the saved card for an order total. Any saved card is approved (demo: no declines).
 export const chargeOrder = (customerId, customerName, { orderId = null, amount }) =>
   respond(() => {
     const card = state.savedCards[customerId];
     if (!card) fail("Add a payment card first.", 402);
-    const declined = card.last4 === DECLINE_LAST4;
     const payment = {
       paymentId: state.nextPaymentId++,
       orderId,
@@ -402,13 +400,12 @@ export const chargeOrder = (customerId, customerName, { orderId = null, amount }
       last4: card.last4,
       amount: Number(amount),
       currency: PRICING_CONFIG.currency,
-      status: declined ? "FAILED" : "PAID",
+      status: "PAID",
       createdAt: new Date().toISOString(),
       refundedAt: null,
-      failureReason: declined ? "Card declined." : null,
+      failureReason: null,
     };
     state.payments.push(payment);
-    if (declined) fail("Your card was declined. Order not placed.", 402);
     return copy(payment);
   });
 
@@ -517,10 +514,12 @@ export const acceptRefundRequest = (requestId) =>
     return refundView(request);
   });
 
-export const declineRefundRequest = (requestId) =>
+export const declineRefundRequest = (requestId, note) =>
   respond(() => {
     const request = findRefund(requestId);
     if (request.status !== "PENDING") fail("This request was already decided.");
+    if (!note || !note.trim()) fail("A decline needs a reason for the customer.", 400);
     request.status = "DECLINED";
+    request.operatorNote = note.trim();
     return refundView(request);
   });

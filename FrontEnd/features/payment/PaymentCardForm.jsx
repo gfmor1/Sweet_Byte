@@ -7,8 +7,16 @@ import styles from "./payment.module.css";
 
 const EMPTY = { number: "", holder: "", expMonth: "", expYear: "", cvv: "" };
 
+const FIELD_LABELS = {
+  number: "card number",
+  holder: "name on card",
+  expMonth: "expiry month",
+  expYear: "expiry year",
+  cvv: "CVV",
+};
+
 // Mock card entry. Number/CVV live only in this component's state and are cleared after saving.
-// Test numbers: 4242 4242 4242 4242 (approved), 4000 0000 0000 0002 (always declined).
+// Any card number of 13 to 19 digits is accepted; every payment is approved (demo only).
 export default function PaymentCardForm({ card, onSave, onRemove, busy }) {
   const [form, setForm] = useState(EMPTY);
   const [editing, setEditing] = useState(!card);
@@ -16,9 +24,18 @@ export default function PaymentCardForm({ card, onSave, onRemove, busy }) {
 
   const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
 
+  // Every field is required; spaces alone do not count.
+  const missing = Object.entries(FIELD_LABELS)
+    .filter(([key]) => !String(form[key]).trim())
+    .map(([, label]) => label);
+
   async function submit(event) {
     event.preventDefault();
     setError("");
+    if (missing.length) {
+      setError(`Please fill in: ${missing.join(", ")}.`);
+      return;
+    }
     try {
       await onSave(form);
       setForm(EMPTY);
@@ -55,7 +72,7 @@ export default function PaymentCardForm({ card, onSave, onRemove, busy }) {
     <form className={`${styles.cardBox} ${styles.form}`} onSubmit={submit} autoComplete="off">
       <label className={`${styles.field} ${styles.full}`}>
         Card number
-        <input inputMode="numeric" placeholder="4242 4242 4242 4242" value={form.number} onChange={set("number")} required />
+        <input inputMode="numeric" placeholder="1234 5678 9012 3456" value={form.number} onChange={set("number")} required />
       </label>
       <label className={`${styles.field} ${styles.full}`}>
         Name on card
@@ -74,11 +91,16 @@ export default function PaymentCardForm({ card, onSave, onRemove, busy }) {
         <input inputMode="numeric" maxLength={4} value={form.cvv} onChange={set("cvv")} required />
       </label>
       <p className={`${styles.muted} ${styles.full}`}>
-        Demo only: no real payment. Use 4242 4242 4242 4242 (approved) or 4000 0000 0000 0002 (declined).
+        Demo only: no real payment. Any card number of 13 to 19 digits works.
       </p>
       {error && <p role="alert" className={`${styles.error} ${styles.full}`}>{error}</p>}
       <div className={styles.actions}>
-        <button type="submit" className={`${styles.btn} ${styles.btnPrimary}`} disabled={busy}>
+        <button
+          type="submit"
+          className={`${styles.btn} ${styles.btnPrimary}`}
+          disabled={busy || missing.length > 0}
+          title={missing.length ? `Fill in: ${missing.join(", ")}` : undefined}
+        >
           Save card
         </button>
         {card && (

@@ -7,7 +7,6 @@ export default function PaymentSummaryCards({ payments, currency = "CAD" }) {
   const tiles = [
     { label: "Collected", value: money(s.paid, currency), sub: `${s.paidCount} paid` },
     { label: "Refunded", value: money(s.refunded, currency), sub: `${s.refundedCount} refunds` },
-    { label: "Failed", value: String(s.failedCount), sub: "declined attempts" },
     { label: "Total payments", value: String(payments.length), sub: "all statuses" },
   ];
   return (
