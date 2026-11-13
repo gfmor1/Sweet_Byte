@@ -126,6 +126,13 @@ const RULES = {
     roles: [OPERATOR],
     check: (ctx) => (ctx.requestStatus !== "PENDING" ? "This request was already decided." : null),
   },
+  viewOwnPayments: { roles: [CUSTOMER] },
+  manageCard: { roles: [CUSTOMER] },
+  viewAllPayments: { roles: [OPERATOR] },
+  refundPayment: {
+    roles: [OPERATOR],
+    check: (ctx) => (ctx.paymentStatus !== "PAID" ? "Only a paid payment can be refunded." : null),
+  },
   reset: { roles: [OPERATOR] },
   viewAllOrders: { roles: [OPERATOR] },
 };

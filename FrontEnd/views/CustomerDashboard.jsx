@@ -16,6 +16,13 @@ import OrderTracker, {
 } from "../features/customer/OrderTracker";
 import ActiveOrdersBar from "../features/customer/ActiveOrdersBar";
 import { courierMarker } from "../features/customer/normalizeCourier";
+import CustomerPaymentsPanel from "../features/payment/CustomerPaymentsPanel";
+import {
+  attachPaymentToOrder,
+  chargeOrder,
+  paymentsEnabled,
+} from "../services/paymentApi";
+import { calculateFare } from "../services/config";
 import OrderHistory from "../features/pricing/OrderHistory";
 import OrderSummary from "../features/pricing/OrderSummary";
 import RefundPanel from "../features/refunds/RefundPanel";
@@ -25,13 +32,6 @@ import {
   getMenu,
   getRestaurants,
 } from "../services/restaurantApi";
-
-import LocationControl from "../features/customer/LocationControl";
-import {
-  clearCustomerLocation,
-  getCustomerLocation,
-  setCustomerLocation,
-} from "../services/locationOverrides";
 
 import {
   cancelOrder,
@@ -55,6 +55,7 @@ export default function CustomerDashboard({ user, onLog }) {
   const [refreshing, setRefreshing] = useState(false);
   const [cancelling, setCancelling] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [paymentsKey, setPaymentsKey] = useState(0);
 
   const [activeTab, setActiveTab] = useState("restaurants");
   const [focusedOrderId, setFocusedOrderId] = useState(null);
@@ -63,31 +64,38 @@ export default function CustomerDashboard({ user, onLog }) {
 
   const mapFocus = useMapFocus();
   const setMapFocus = useRef(mapFocus?.setFocus);
+  const setMapExtras = useRef(mapFocus?.setExtras);
+
+  const mounted = useRef(false);
+  const loading = useRef(false);
+  const placingOrder = useRef(false);
+  const selection = useRef(null);
+  const lastRefreshError = useRef("");
+  const logCallback = useRef(onLog);
 
   useEffect(() => {
     setMapFocus.current = mapFocus?.setFocus;
-  }, [mapFocus]);
-
-  const setMapExtras = useRef(mapFocus?.setExtras);
-
-  useEffect(() => {
     setMapExtras.current = mapFocus?.setExtras;
   }, [mapFocus]);
 
-  // Simulated delivery location ("You" pin), kept in this browser only.
-  const [savedLocation, setSavedLocation] = useState(null);
-  const [picking, setPicking] = useState(false);
-  const [draftLocation, setDraftLocation] = useState(null);
+  useEffect(() => {
+    logCallback.current = onLog;
+  }, [onLog]);
+
+  // Display the address selected at checkout on the map.
+  const handleDeliveryChange = useCallback((delivery) => {
+    setMapExtras.current?.({
+      userPin: delivery
+        ? {
+            name: "Delivery address",
+            latitude: delivery.latitude,
+            longitude: delivery.longitude,
+          }
+        : null,
+    });
+  }, []);
 
   useEffect(() => {
-    const saved = getCustomerLocation();
-    if (saved) {
-      setSavedLocation(saved);
-      setMapExtras.current?.({
-        userPin: { name: "You", latitude: saved.latitude, longitude: saved.longitude },
-      });
-    }
-
     return () => {
       setMapExtras.current?.({
         userPin: null,
@@ -97,92 +105,12 @@ export default function CustomerDashboard({ user, onLog }) {
     };
   }, []);
 
-  const pickerActive = picking && activeTab === "restaurants" && !selectedRestaurant;
-  const pickerPoint = draftLocation || savedLocation;
-  const pickerLat = pickerPoint?.latitude;
-  const pickerLng = pickerPoint?.longitude;
-
-  useEffect(() => {
-    if (!pickerActive) {
-      setMapExtras.current?.({ picker: null });
-      return;
-    }
-
-    setMapExtras.current?.({
-      picker: {
-        kind: "you",
-        label: "Click the map to set your delivery location",
-        point:
-          pickerLat === undefined
-            ? undefined
-            : { latitude: pickerLat, longitude: pickerLng },
-        onPick: (latitude, longitude) =>
-          setDraftLocation({ latitude, longitude }),
-      },
-    });
-  }, [pickerActive, pickerLat, pickerLng]);
-
-  function startPicking() {
-    setError("");
-    setMessage("");
-    setDraftLocation(null);
-    setPicking(true);
-  }
-
-  function cancelPicking() {
-    setPicking(false);
-    setDraftLocation(null);
-  }
-
-  function saveLocation() {
-    if (!draftLocation) return;
-    onLog?.({ command: "Set my location" });
-
-    try {
-      setCustomerLocation(draftLocation.latitude, draftLocation.longitude);
-      setSavedLocation(draftLocation);
-      setMapExtras.current?.({
-        userPin: {
-          name: "You",
-          latitude: draftLocation.latitude,
-          longitude: draftLocation.longitude,
-        },
-      });
-      setPicking(false);
-      setDraftLocation(null);
-      setMessage("Delivery location saved (simulated, this browser only).");
-      onLog?.({ command: "Set my location", result: "Success" });
-    } catch (err) {
-      setError(err.message);
-      onLog?.({ command: "Set my location", error: err.message });
-    }
-  }
-
-  function clearLocation() {
-    clearCustomerLocation();
-    setSavedLocation(null);
-    setDraftLocation(null);
-    setPicking(false);
-    setMapExtras.current?.({ userPin: null });
-    setMessage("Delivery location cleared.");
-  }
-
   const handleVisibleIds = useCallback((ids) => {
-    setMapExtras.current?.({ visibleRestaurantIds: ids });
+    setMapExtras.current?.({
+      visibleRestaurantIds: ids,
+    });
   }, []);
 
-  const mounted = useRef(false);
-  const loading = useRef(false);
-  const selection = useRef(null);
-  const lastRefreshError = useRef("");
-  const logCallback = useRef(onLog);
-
-  useEffect(() => {
-    logCallback.current = onLog;
-  }, [onLog]);
-
-  // Resolves true on success, false on failure. Failures are logged once per
-  // distinct message so the 5 s poll does not flood the console.
   const refresh = useCallback(async () => {
     if (loading.current) return null;
 
@@ -322,24 +250,92 @@ export default function CustomerDashboard({ user, onLog }) {
     }
   }
 
-  async function handlePlaceOrder(items) {
+  async function handlePlaceOrder(
+    items,
+    { subtotal = 0, delivery } = {}
+  ) {
+    if (placingOrder.current || !selectedRestaurant) {
+      return false;
+    }
+
+    placingOrder.current = true;
+
+    const restaurantId = selectedRestaurant.id;
+
     setError("");
     setMessage("");
 
     onLog?.({
       command: "Place Order",
-      restaurantId: selectedRestaurant.id,
+      restaurantId,
     });
 
     try {
+      if (
+        typeof delivery?.deliveryAddress !== "string" ||
+        !delivery.deliveryAddress.trim() ||
+        !Number.isFinite(delivery.latitude) ||
+        !Number.isFinite(delivery.longitude) ||
+        Math.abs(delivery.latitude) > 90 ||
+        Math.abs(delivery.longitude) > 180
+      ) {
+        throw new Error("Please select a valid delivery address.");
+      }
+
+      const destination = {
+        deliveryAddress: delivery.deliveryAddress.trim(),
+        latitude: delivery.latitude,
+        longitude: delivery.longitude,
+      };
+
+      // Preserve the existing payment flow.
+      let payment = null;
+
+      if (paymentsEnabled) {
+        onLog?.({
+          command: "Charge payment card",
+        });
+
+        try {
+          payment = await chargeOrder(user, {
+            amount: calculateFare(subtotal).total,
+          });
+
+          onLog?.({
+            command: "Charge payment card",
+            result: "Success",
+          });
+        } catch (chargeErr) {
+          setPaymentsKey((previous) => previous + 1);
+
+          const hint =
+            chargeErr.status === 402 &&
+            /card first/i.test(chargeErr.message)
+              ? " Open the Payments tab to add one."
+              : "";
+
+          throw new Error(chargeErr.message + hint);
+        }
+      }
+
       const order = await placeOrder(
-        selectedRestaurant.id,
-        items
+        restaurantId,
+        items,
+        destination
       );
+
+      if (payment) {
+        attachPaymentToOrder(
+          payment.paymentId,
+          order.id
+        ).catch(() => {});
+
+        setPaymentsKey((previous) => previous + 1);
+      }
 
       onLog?.({
         command: "Place Order",
-        restaurantId: selectedRestaurant.id,
+        restaurantId,
         orderId: order.id,
         result: "Success",
       });
@@ -364,11 +360,13 @@ export default function CustomerDashboard({ user, onLog }) {
 
       onLog?.({
         command: "Place Order",
-        restaurantId: selectedRestaurant.id,
+        restaurantId,
         error: err.message,
       });
 
       return false;
+    } finally {
+      placingOrder.current = false;
     }
   }
 
@@ -429,7 +427,6 @@ export default function CustomerDashboard({ user, onLog }) {
       command: REFRESH_COMMAND,
     });
 
-    // Manual refresh always reports its outcome.
     lastRefreshError.current = "";
 
     const ok = await refresh();
@@ -447,6 +444,7 @@ export default function CustomerDashboard({ user, onLog }) {
   function backToRestaurants() {
     selection.current = null;
     setSelectedRestaurant(null);
+    handleDeliveryChange(null);
   }
 
   function openOrderFromBar(orderId) {
@@ -467,37 +465,50 @@ export default function CustomerDashboard({ user, onLog }) {
     ["DELIVERED", "REFUNDED"].includes(order.status)
   );
 
-  // Map focus: the open restaurant (with couriers of its active orders), or
-  // the order selected in My Orders.
   const focusOrderIds = new Set();
   let focusRestaurantIds = null;
 
   if (activeTab === "restaurants" && selectedRestaurant) {
     focusRestaurantIds = [selectedRestaurant.id];
+
     activeOrders
-      .filter((o) => String(o.restaurantId) === String(selectedRestaurant.id))
-      .forEach((o) => focusOrderIds.add(o.id));
+      .filter(
+        (order) =>
+          String(order.restaurantId) ===
+          String(selectedRestaurant.id)
+      )
+      .forEach((order) => focusOrderIds.add(order.id));
   } else if (activeTab === "orders") {
-    // My Orders: the map shows only the restaurant(s) of my active orders and their couriers.
-    // Selecting one order card narrows it to that order.
     const selectedOrder =
       focusedOrderId !== null
-        ? activeOrders.find((o) => o.id === focusedOrderId)
+        ? activeOrders.find(
+            (order) => order.id === focusedOrderId
+          )
         : null;
-    const shown = selectedOrder ? [selectedOrder] : activeOrders;
-    focusRestaurantIds = [...new Set(shown.map((o) => o.restaurantId))];
-    shown.forEach((o) => focusOrderIds.add(o.id));
+
+    const shown = selectedOrder
+      ? [selectedOrder]
+      : activeOrders;
+
+    focusRestaurantIds = [
+      ...new Set(shown.map((order) => order.restaurantId)),
+    ];
+
+    shown.forEach((order) => focusOrderIds.add(order.id));
   }
 
   const focusCouriers = activeOrders
-    .filter((o) => focusOrderIds.has(o.id))
+    .filter((order) => focusOrderIds.has(order.id))
     .map(courierMarker)
     .filter(Boolean);
 
   const focusKey =
     focusRestaurantIds === null
       ? "none"
-      : JSON.stringify([focusRestaurantIds, focusCouriers]);
+      : JSON.stringify([
+          focusRestaurantIds,
+          focusCouriers,
+        ]);
 
   useEffect(() => {
     if (focusKey === "none") {
@@ -506,7 +517,11 @@ export default function CustomerDashboard({ user, onLog }) {
     }
 
     const [restaurantIds, couriers] = JSON.parse(focusKey);
-    setMapFocus.current?.({ restaurantIds, couriers });
+
+    setMapFocus.current?.({
+      restaurantIds,
+      couriers,
+    });
   }, [focusKey]);
 
   useEffect(() => {
@@ -529,16 +544,27 @@ export default function CustomerDashboard({ user, onLog }) {
 
   // Scroll to an order card once the My Orders tab has rendered it.
   useEffect(() => {
-    if (scrollTarget === null || activeTab !== "orders") return;
+    if (
+      scrollTarget === null ||
+      activeTab !== "orders"
+    ) {
+      return;
+    }
 
     let tries = 0;
     let timer;
 
     function attempt() {
-      const el = document.getElementById(`order-${scrollTarget}-card`);
+      const element = document.getElementById(
+        `order-${scrollTarget}-card`
+      );
 
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+
         setScrollTarget(null);
       } else if (tries++ < 10) {
         timer = setTimeout(attempt, 50);
@@ -554,11 +580,17 @@ export default function CustomerDashboard({ user, onLog }) {
 
   const restaurantsContent = selectedRestaurant ? (
     <section className={styles.section}>
-      <button className="btn-secondary" onClick={backToRestaurants}>
+      <button
+        className="btn-secondary"
+        onClick={backToRestaurants}
+      >
         Back to restaurants
       </button>
 
-      <h2 className={styles.sectionHead} style={{ marginTop: "0.75rem" }}>
+      <h2
+        className={styles.sectionHead}
+        style={{ marginTop: "0.75rem" }}
+      >
         {selectedRestaurant.name}
       </h2>
 
@@ -568,6 +600,7 @@ export default function CustomerDashboard({ user, onLog }) {
         role={role}
         onLog={onLog}
         onPlaceOrder={handlePlaceOrder}
+        onDeliveryChange={handleDeliveryChange}
       />
     </section>
   ) : (
@@ -576,35 +609,32 @@ export default function CustomerDashboard({ user, onLog }) {
       loading={!loaded}
       onSelect={selectRestaurant}
       onVisibleIdsChange={handleVisibleIds}
-      headerExtra={
-        <LocationControl
-          saved={savedLocation}
-          draft={draftLocation}
-          picking={picking}
-          onStart={startPicking}
-          onSave={saveLocation}
-          onCancel={cancelPicking}
-          onClear={clearLocation}
-        />
-      }
     />
   );
 
   const ordersContent = (
-    <section className={styles.section} aria-labelledby="my-orders-heading">
-      <h2 id="my-orders-heading" className={styles.sectionHead}>
+    <section
+      className={styles.section}
+      aria-labelledby="my-orders-heading"
+    >
+      <h2
+        id="my-orders-heading"
+        className={styles.sectionHead}
+      >
         My Orders
       </h2>
 
       {sortedOrders.length === 0 ? (
         loaded && (
           <p>
-            You have no orders yet. Open the Restaurants tab to place your
-            first order.
+            You have no orders yet. Open the Restaurants tab
+            to place your first order.
           </p>
         )
       ) : (
-        <ul className={`${styles.grid} ${styles.gridWide}`}>
+        <ul
+          className={`${styles.grid} ${styles.gridWide}`}
+        >
           {sortedOrders.map((order) => (
             <OrderTracker
               key={order.id}
@@ -632,27 +662,48 @@ export default function CustomerDashboard({ user, onLog }) {
 
       {pastOrders.length > 0 && (
         <section className={styles.section}>
-          <h2 className={styles.sectionHead}>Delivered orders</h2>
+          <h2 className={styles.sectionHead}>
+            Delivered orders
+          </h2>
 
-          <ul className={`${styles.grid} ${styles.gridWide}`}>
+          <ul
+            className={`${styles.grid} ${styles.gridWide}`}
+          >
             {pastOrders.map((order) => (
-              <li key={order.id} className={`card ${styles.card}`}>
+              <li
+                key={order.id}
+                className={`card ${styles.card}`}
+              >
                 <details
                   onToggle={(event) => {
                     const open = event.currentTarget.open;
-                    setOpenSummaries((prev) =>
-                      prev[order.id] === open
-                        ? prev
-                        : { ...prev, [order.id]: open }
+
+                    setOpenSummaries((previous) =>
+                      previous[order.id] === open
+                        ? previous
+                        : {
+                            ...previous,
+                            [order.id]: open,
+                          }
                     );
                   }}
                 >
                   <summary>
-                    Order #{order.id} - {order.restaurantName}
+                    Order #{order.id} -{" "}
+                    {order.restaurantName}
                   </summary>
 
+                  {order.deliveryAddress && (
+                    <p>
+                      Delivery: {order.deliveryAddress}
+                    </p>
+                  )}
+
                   {openSummaries[order.id] && (
-                    <OrderSummary orderId={order.id} onLog={onLog} />
+                    <OrderSummary
+                      orderId={order.id}
+                      onLog={onLog}
+                    />
                   )}
                 </details>
               </li>
@@ -666,7 +717,10 @@ export default function CustomerDashboard({ user, onLog }) {
   return (
     <div className="dashboard">
       <div className={styles.toolbar}>
-        <h2 className={styles.sectionHead} style={{ margin: 0 }}>
+        <h2
+          className={styles.sectionHead}
+          style={{ margin: 0 }}
+        >
           Customer Dashboard
         </h2>
 
@@ -692,19 +746,45 @@ export default function CustomerDashboard({ user, onLog }) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         tabs={[
-          { id: "restaurants", label: "Restaurants", content: restaurantsContent },
+          {
+            id: "restaurants",
+            label: "Restaurants",
+            content: restaurantsContent,
+          },
           {
             id: "orders",
             label: "My Orders",
             badge: activeOrders.length || undefined,
             content: ordersContent,
           },
-          { id: "history", label: "History", content: historyContent },
+          {
+            id: "history",
+            label: "History",
+            content: historyContent,
+          },
           { id: "refunds", label: "Refunds", content: <RefundPanel onLog={onLog} /> },
+          ...(paymentsEnabled
+            ? [
+                {
+                  id: "payments",
+                  label: "Payments",
+                  content: (
+                    <CustomerPaymentsPanel
+                      user={user}
+                      onLog={onLog}
+                      refreshKey={paymentsKey}
+                    />
+                  ),
+                },
+              ]
+            : []),
         ]}
       />
 
-      <ActiveOrdersBar orders={orders} onOpenOrder={openOrderFromBar} />
+      <ActiveOrdersBar
+        orders={orders}
+        onOpenOrder={openOrderFromBar}
+      />
     </div>
   );
 }

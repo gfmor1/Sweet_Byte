@@ -1,0 +1,68 @@
+/* Works inside the operator theme (--op-* vars) and the customer view (fallbacks). */
+.root {
+  --p-accent: var(--op-accent, #c74778);
+  --p-text: var(--op-text, #352631);
+  --p-muted: var(--op-muted, #7a6670);
+  --p-border: var(--op-border, #ecd5dd);
+  --p-soft: var(--op-soft, #fff0f4);
+  --p-ok: #2e7d32;
+  --p-ok-soft: #eaf6ea;
+  --p-danger: #b3321f;
+  --p-danger-soft: #fdecea;
+  --p-warn: #9a6a00;
+  --p-warn-soft: #fff4d6;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  color: var(--p-text);
+}
+.root h2, .root h3 { margin: 0; }
+.muted { color: var(--p-muted); font-size: 0.9rem; }
+.head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--p-border); border-radius: 10px; padding: 12px; background: #fff; }
+.tileLabel { font-size: 0.8rem; color: var(--p-muted); }
+.tileValue { font-size: 1.35rem; font-weight: 700; margin-top: 2px; }
+.tileSub { font-size: 0.8rem; color: var(--p-muted); }
+
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
+.s_PAID { background: var(--p-ok-soft); color: var(--p-ok); }
+.s_FAILED { background: var(--p-danger-soft); color: var(--p-danger); }
+.s_REFUNDED { background: var(--p-warn-soft); color: var(--p-warn); }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--p-border); background: #fff; color: var(--p-text); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.chipActive { background: var(--p-accent); border-color: var(--p-accent); color: #fff; }
+
+.tableWrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+.table th, .table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--p-border); }
+.table th { font-size: 0.78rem; text-transform: uppercase; color: var(--p-muted); }
+.num { text-align: right !important; font-variant-numeric: tabular-nums; }
+.empty { color: var(--p-muted); font-style: italic; }
+
+.btn { border: 1px solid var(--p-border); background: #fff; color: var(--p-text); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btnPrimary { background: var(--p-accent); border-color: var(--p-accent); color: #fff; }
+.btnDanger { color: var(--p-danger); border-color: var(--p-danger); }
+
+.cardBox { border: 1px solid var(--p-border); border-radius: 12px; padding: 14px; background: #fff; display: flex; flex-direction: column; gap: 10px; max-width: 420px; }
+.savedCard { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cardFace { font-weight: 700; letter-spacing: 0.04em; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field { display: flex; flex-direction: column; gap: 3px; font-size: 0.85rem; }
+.field input { padding: 7px 9px; border: 1px solid var(--p-border); border-radius: 8px; font: inherit; }
+.full { grid-column: 1 / -1; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; grid-column: 1 / -1; }
+.error { color: var(--p-danger); margin: 0; }
+.ok { color: var(--p-ok); margin: 0; }
+
+@media (max-width: 560px) {
+  .form { grid-template-columns: 1fr; }
+  .table thead { display: none; }
+  .table tr { display: block; border-bottom: 1px solid var(--p-border); padding: 6px 0; }
+  .table td { display: flex; justify-content: space-between; border: 0; padding: 3px 10px; }
+  .table td::before { content: attr(data-label); color: var(--p-muted); font-size: 0.78rem; }
+}

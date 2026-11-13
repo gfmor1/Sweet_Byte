@@ -6,6 +6,9 @@ function toOrder(order) {
     restaurantId: order.restaurantId,
     restaurantName: order.restaurantName,
     status: order.status,
+    deliveryAddress: order.deliveryAddress,
+latitude: order.latitude,
+longitude: order.longitude,
 
     items: order.lines.map((line) => ({
       id: line.menuItemId,
@@ -30,23 +33,40 @@ function toOrder(order) {
   };
 }
 
-export async function placeOrder(restaurantId, selectedItems) {
+export async function placeOrder(
+  restaurantId,
+  selectedItems,
+  delivery
+) {
+  if (
+    !delivery?.deliveryAddress?.trim() ||
+    !Number.isFinite(delivery.latitude) ||
+    !Number.isFinite(delivery.longitude) ||
+    Math.abs(delivery.latitude) > 90 ||
+    Math.abs(delivery.longitude) > 180
+  ) {
+    throw new Error("Please select a valid delivery address.");
+  }
+
   const order = await apiRequest("/api/orders", {
     method: "POST",
 
     body: {
       restaurantId: String(restaurantId),
 
+      deliveryAddress: delivery.deliveryAddress.trim(),
+      latitude: delivery.latitude,
+      longitude: delivery.longitude,
+
       lines: selectedItems.map((item) => ({
         menuItemId: item.id,
-        quantity: item.quantity,
-      })),
-    },
+        quantity: item.quantity
+      }))
+    }
   });
 
   return toOrder(order);
 }
-
 export async function getMyOrders() {
   const orders = await apiRequest("/api/orders/me");
 
