@@ -1,9 +1,14 @@
+import { apiRequest } from "./apiClient";
 import { useMocks } from "./config";
 import * as mockStore from "./mocks/mockStore";
+import { refundOrder } from "./operatorApi";
 
-// Payments are a front-end-only simulation for the demo: always on, no backend, nothing saved.
-// Cards and payments live in this page's memory (the mock store) and disappear on reload.
-// Billing and the ledger (backend) stay the source of truth for what an order cost.
+// Payments (mock charge, no real provider) are recorded by the backend:
+//   - placing an order sends the saved card; the backend stores it on the order and writes
+//     a PAYMENT billing record (POST /api/orders)
+//   - GET /api/payments lists them (customer: own, operator: all), with REFUNDED status once
+//     billing has a REFUND record (cancel, reject, approved refund request, operator refund)
+// Only the saved card stays in this page's memory (mock store): brand/last4/holder/expiry, never the number.
 export const paymentsEnabled = true;
 
 // Payment shape: { paymentId, orderId|null, customerId, customerName, method, brand, last4,
@@ -16,14 +21,16 @@ const DEMO_CUSTOMER = "demo";
 const realOnly = (payments) =>
   useMocks ? payments : payments.filter((p) => p.customerId !== DEMO_CUSTOMER);
 
-// Customer: own history
+// Customer: own history (backend scopes by the logged-in user)
 export async function getMyPayments(user) {
-  return realOnly(await mockStore.getMyPayments(customerKey(user)));
+  if (useMocks) return realOnly(await mockStore.getMyPayments(customerKey(user)));
+  return apiRequest("/api/payments");
 }
 
-// Operator: every payment made in this browser session
+// Operator: every payment (backend scopes by role)
 export async function getAllPayments() {
-  return realOnly(await mockStore.getAllPayments());
+  if (useMocks) return realOnly(await mockStore.getAllPayments());
+  return apiRequest("/api/payments");
 }
 
 // Customer: saved card or null
@@ -40,19 +47,11 @@ export function removeCard(user) {
   return mockStore.removeCard(customerKey(user));
 }
 
-// Customer: charge the saved card; always approved, rejects (402) only when there is no card.
-export function chargeOrder(user, { amount }) {
-  return mockStore.chargeOrder(customerKey(user), user?.name, { amount });
-}
-
-// Link a payment to the order created right after it.
-export function attachPaymentToOrder(paymentId, orderId) {
-  return mockStore.attachPaymentToOrder(paymentId, orderId);
-}
-
-// Operator: mark a payment refunded (display only; the real refund is the refund request flow).
-export function refundPayment(paymentId) {
-  return mockStore.refundPayment(paymentId);
+// Operator: refund a payment = refund its order through the backend Automatic Credit Refund
+// (billing REFUND record + ledger). Takes the payment row, since the refund is per order.
+export function refundPayment(payment) {
+  if (useMocks) return mockStore.refundPayment(payment.paymentId);
+  return refundOrder(payment.orderId);
 }
 
 // Totals are derived client-side so the backend only needs the list endpoint.

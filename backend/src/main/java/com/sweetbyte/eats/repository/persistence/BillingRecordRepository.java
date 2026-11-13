@@ -1,5 +1,6 @@
 package com.sweetbyte.eats.repository.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +17,6 @@ public interface BillingRecordRepository extends JpaRepository<BillingRecord, Lo
     boolean existsByOrderIdAndType(Long orderId, BillingRecordType type);
 
     List<BillingRecord> findByOrderIdOrderByCreatedAtAsc(Long orderId);
+
+    List<BillingRecord> findByOrderIdIn(Collection<Long> orderIds);
 }
