@@ -2,6 +2,8 @@ package com.sweetbyte.eats.repository.seed;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -12,17 +14,21 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sweetbyte.eats.application.enums.CourierStatus;
 import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.MenuItem;
 import com.sweetbyte.eats.application.model.Operator;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
+import com.sweetbyte.eats.repository.persistence.CourierRepository;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.repository.persistence.UserRepository;
 import com.sweetbyte.eats.repository.supabase.SupabaseAuthAdminClient;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import tools.jackson.databind.ObjectMapper;
 
 //runs at startup, reads the seed file and fills the database
@@ -39,11 +45,16 @@ public class SeedDataLoader implements ApplicationRunner {
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
     private final SupabaseAuthAdminClient supabaseAdmin;
+    private final CourierRepository courierRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public SeedDataLoader(ObjectMapper objectMapper, UserRepository userRepository,
                           RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
-                          SupabaseAuthAdminClient supabaseAdmin) {
+                          SupabaseAuthAdminClient supabaseAdmin, CourierRepository courierRepository) {
         this.supabaseAdmin = supabaseAdmin;
+        this.courierRepository = courierRepository;
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
         this.restaurantRepository = restaurantRepository;
@@ -53,11 +64,62 @@ public class SeedDataLoader implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) throws IOException {
-        SeedData seed;
-        try (InputStream in = new ClassPathResource(SEED_FILE).getInputStream()) {
-            seed = objectMapper.readValue(in, SeedData.class);
+        seedMissing(readSeed());
+    }
+
+    // Reset (R-DASH, operator only): returns the system to the state described by seed.json.
+    // 1. wipes every order and everything derived from it (offers, ledger, billing, refunds, events)
+    // 2. puts seeded restaurants, menus and couriers back to their seeded values
+    // 3. re-creates any seeded record (incl. accounts) that was deleted
+    // Accounts registered at runtime are kept; their couriers go back OFFLINE (they hold no order anymore).
+    @Transactional
+    public void resetToSeed() throws IOException {
+        SeedData seed = readSeed();
+
+        // Native TRUNCATE: one statement, no FK ordering issues (ledger refunds point to ledger charges).
+        // RESTART IDENTITY so order ids start again at 1. No CASCADE: fails loudly if another table depends on these.
+        entityManager.createNativeQuery("TRUNCATE TABLE ledger_entry_timestamps, ledger_entries, billing_records, "
+                + "refund_requests, delivery_offers, domain_events, order_lines, orders RESTART IDENTITY").executeUpdate();
+        entityManager.clear(); // drop any cached entity that pointed to a deleted row
+
+        for (SeedData.RestaurantSeed r : seed.restaurants()) {
+            restaurantRepository.findByName(r.name()).ifPresent(restaurant -> {
+                restaurant.resetTo(r.status(), r.latitude(), r.longitude());
+                Map<String, SeedData.MenuItemSeed> seeded = new HashMap<>();
+                for (SeedData.MenuItemSeed item : r.menu()) seeded.put(item.name(), item);
+                for (MenuItem item : menuItemRepository.findByRestaurantRestaurantId(restaurant.getRestaurantId())) {
+                    SeedData.MenuItemSeed s = seeded.get(item.getName());
+                    if (s == null) {
+                        menuItemRepository.delete(item); // added after the seed
+                    } else {
+                        item.setPrice(s.price());
+                        item.setStatus(s.status());
+                    }
+                }
+            });
         }
 
+        Map<String, SeedData.CourierSeed> seededCouriers = new HashMap<>();
+        for (SeedData.CourierSeed c : seed.couriers()) seededCouriers.put(c.email(), c);
+        for (Courier courier : courierRepository.findAll()) {
+            SeedData.CourierSeed s = seededCouriers.get(courier.getEmail());
+            double lat = s != null ? s.latitude() : courier.getLatitude();
+            double lon = s != null ? s.longitude() : courier.getLongitude();
+            courier.resetTo(CourierStatus.OFFLINE, lat, lon); // seeded couriers start off duty
+        }
+
+        entityManager.flush();
+        seedMissing(seed);
+        log.info("System reset to the initial state of {}", SEED_FILE);
+    }
+
+    private SeedData readSeed() throws IOException {
+        try (InputStream in = new ClassPathResource(SEED_FILE).getInputStream()) {
+            return objectMapper.readValue(in, SeedData.class);
+        }
+    }
+
+    private void seedMissing(SeedData seed) {
         // Users need a Supabase Auth account first; without the service-role key only
         // restaurants and menus are seeded (users are added on a later run that has it).
         boolean seedUsers = supabaseAdmin.isConfigured();
