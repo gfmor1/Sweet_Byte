@@ -10,5 +10,8 @@ import com.sweetbyte.eats.application.model.User;
 //   2. OrderService.cancelOrder  (order CANCELLED)
 //   3. OrderService.rejectOrder  (restaurant rejects, order REJECTED)
 public interface CreditRefundService {
-    BillingRecord refund(Order order, String reason, User actor);
+    BillingRecord refund(Order order, String reason, User actor);   // returns the new REFUND billing row
+
+    // Operator direct refund (POST /api/orders/{id}/refund): loads the order, then refund(...).
+    BillingRecord refund(Long orderId, String reason, User actor);
 }

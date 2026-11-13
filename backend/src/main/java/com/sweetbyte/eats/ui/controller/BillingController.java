@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sweetbyte.eats.application.model.User;
+import com.sweetbyte.eats.application.enums.LedgerEntryType;
 import com.sweetbyte.eats.application.service.AuthService;
+import com.sweetbyte.eats.application.service.CreditRefundService;
 import com.sweetbyte.eats.application.service.LedgerService;
 import com.sweetbyte.eats.application.service.OrderSummaryService;
 import com.sweetbyte.eats.ui.dto.FareResponse;
@@ -32,10 +34,13 @@ public class BillingController {
     private final OrderSummaryService orderSummaryService;
     private final LedgerService ledgerService;
     private final AuthService authService;
+    private final CreditRefundService creditRefundService;
 
     public BillingController(OrderSummaryService orderSummaryService,
                              LedgerService ledgerService,
-                             AuthService authService) {
+                             AuthService authService,
+                             CreditRefundService creditRefundService) {
+        this.creditRefundService = creditRefundService;
         this.orderSummaryService = orderSummaryService;
         this.ledgerService = ledgerService;
         this.authService = authService;
@@ -64,8 +69,13 @@ public class BillingController {
     public LedgerEntryResponse refund(@AuthenticationPrincipal Jwt jwt,
                                       @PathVariable Long id,
                                       @RequestBody RefundRequest body) {
-        return LedgerEntryResponse.from(ledgerService.refund(id,
-                body.reason(), currentUser(jwt)));
+        // Through the Automatic Credit Refund, so billing gets its REFUND row too (not only the ledger).
+        creditRefundService.refund(id, body.reason(), currentUser(jwt));
+        return ledgerService.entriesFor(id).stream()
+                .filter(e -> e.getType() == LedgerEntryType.REFUND)
+                .findFirst()
+                .map(LedgerEntryResponse::from)
+                .orElseThrow(() -> new IllegalStateException("Order " + id + " has no ledger refund entry"));
     }
 
 
