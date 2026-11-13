@@ -8,7 +8,9 @@
 # Open http://localhost:3001
 
 # ---------- 1. backend: Maven -> executable jar ----------
-FROM eclipse-temurin:21-jdk AS backend-build
+# Runs on the build machine's own platform: the jar works on any CPU, and Maven under
+# emulation (multi-arch CI build) would be very slow.
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS backend-build
 WORKDIR /build
 # dependencies first, so they stay cached while only the source changes
 COPY backend/mvnw backend/pom.xml ./
