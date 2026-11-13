@@ -1,0 +1,12 @@
+# keep the build context small and secrets out of the image
+.git
+.github
+**/node_modules
+**/.next
+**/target
+**/.env
+**/.env.*
+!**/.env.example
+**/application-local.properties
+**/.DS_Store
+Notes.txt

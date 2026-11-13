@@ -1,0 +1,57 @@
+# Builds the SweetByte image (Dockerfile at the repo root) and pushes it to
+# GitHub Container Registry: ghcr.io/<owner>/<repo>, e.g. ghcr.io/gfmor1/sweet_byte
+#
+# Tags: latest (main), the branch name, sha-<short sha>, and vX.Y.Z for git tags v*.
+# No secrets or build args needed: everything is hardcoded in the Dockerfile / application.properties.
+# (GITHUB_TOKEN below is provided automatically by GitHub, nothing to configure.)
+name: Docker image
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]        # build only, to catch a broken Dockerfile before merge
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern=v{{version}}
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

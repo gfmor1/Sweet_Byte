@@ -1,0 +1,53 @@
+# SweetByte: one image with the Spring Boot backend (:8080) and the Next.js frontend (:3001).
+#
+# No variables or secrets to pass: class project, everything is hardcoded on purpose
+# (DB password + Supabase keys in backend application.properties, Geoapify key below).
+#
+# Build:  docker build -t sweetbyte .
+# Run:    docker run -p 8080:8080 -p 3001:3001 sweetbyte
+# Open http://localhost:3001
+
+# ---------- 1. backend: Maven -> executable jar ----------
+FROM eclipse-temurin:21-jdk AS backend-build
+WORKDIR /build
+# dependencies first, so they stay cached while only the source changes
+COPY backend/mvnw backend/pom.xml ./
+COPY backend/.mvn .mvn
+RUN chmod +x mvnw && ./mvnw -B -q dependency:go-offline
+COPY backend/src src
+RUN ./mvnw -B -q -DskipTests package && cp target/eats-*.jar /build/app.jar
+
+# ---------- 2. frontend: next build ----------
+FROM node:22-bookworm-slim AS frontend-build
+WORKDIR /build
+COPY FrontEnd/package.json FrontEnd/package-lock.json ./
+RUN npm ci
+COPY FrontEnd/ ./
+# NEXT_PUBLIC_* values are written into the browser bundle at build time (hardcoded on purpose).
+# The browser calls the backend at this URL, so it must be reachable from the user's machine.
+ENV NEXT_PUBLIC_API_URL=http://localhost:8080 \
+    NEXT_PUBLIC_GEOAPIFY_API_KEY=bb4b70abb0ff4b5193391f285f9e0c3e \
+    NEXT_PUBLIC_USE_MOCKS=false \
+    NEXT_TELEMETRY_DISABLED=1
+RUN npm run build && npm prune --omit=dev
+
+# ---------- 3. runtime: Node + Java 21 JRE ----------
+FROM node:22-bookworm-slim
+# the JRE comes straight from the official Temurin image
+ENV JAVA_HOME=/opt/java/openjdk \
+    PATH=/opt/java/openjdk/bin:$PATH \
+    NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1
+COPY --from=eclipse-temurin:21-jre /opt/java/openjdk /opt/java/openjdk
+
+WORKDIR /app
+COPY --from=backend-build /build/app.jar backend/app.jar
+COPY --from=frontend-build /build/package.json frontend/package.json
+COPY --from=frontend-build /build/node_modules frontend/node_modules
+COPY --from=frontend-build /build/.next frontend/.next
+COPY docker/start.sh start.sh
+RUN chmod +x start.sh && chown -R node:node /app
+
+USER node
+EXPOSE 8080 3001
+CMD ["./start.sh"]
