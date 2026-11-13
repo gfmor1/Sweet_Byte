@@ -7,7 +7,10 @@ import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
+import com.sweetbyte.eats.application.model.CardDetails;
 import com.sweetbyte.eats.application.model.Customer;
+import com.sweetbyte.eats.application.model.Fare;
+import com.sweetbyte.eats.application.model.Payment;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.User;
@@ -24,36 +27,56 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
+    private final DispatchService dispatchService; 
+    private final PricingService pricingService;
+    private final CreditRefundService creditRefundService;
 
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
         MenuItemRepository menuItemRepository,
         EventService eventService,
-        OrderPermissionResolver permissionResolver) {
+        OrderPermissionResolver permissionResolver,
+        DispatchService dispatchService,
+        PricingService pricingService,
+        CreditRefundService creditRefundService) {
+        this.pricingService = pricingService;
+        this.creditRefundService = creditRefundService;
         this.eventService = eventService;
         this.orderRepository = orderRepository;
         this.restaurantRepository = restaurantRepository;
         this.menuItemRepository = menuItemRepository;
         this.permissionResolver = permissionResolver;
+        this.dispatchService = dispatchService;
     }
 
     @Override
     @Transactional
-    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user) {
+    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities,
+                            String deliveryAddress, Double latitude, Double longitude,
+                            CardDetails card, User user) {
         if (itemQuantities.isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
             throw new PermissionDeniedException("Only a customer can place an order");
+        if (latitude == null || longitude == null)
+            throw new IllegalArgumentException("Delivery coordinates are required");
+        if (card == null)
+            throw new IllegalArgumentException("Payment information is required");
         Customer customer = (Customer) user;
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new NotFoundException("Restaurant", restaurantId));
-        Order order = new Order(customer, restaurant);
+        Order order = new Order(customer, restaurant, deliveryAddress, latitude, longitude);
         itemQuantities.forEach((menuItemId, quantity) -> {
             MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
             order.addLine(menuItem, quantity);
         });
+        // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
+        Fare fare = pricingService.computeFare(order);
+        order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
+                card.expMonth(), card.expYear(), fare.getTotal()));
         Order saved = orderRepository.save(order);
+        pricingService.recordFare(saved);    // new BillingRecord for this order (same transaction)
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
         return saved;
     }
@@ -101,6 +124,7 @@ public class OrderServiceImpl implements OrderService {
         order.reject(reason);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, reason);
+        creditRefundService.refund(saved, reason, user);    // Automatic Credit Refund: customer paid at placement
         return saved;
     }
 
@@ -120,6 +144,9 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Error : cannot update order to status " + newStatus);
         Order saved = orderRepository.save(order);
         eventService.record("Order", saved.getOrderId(), from, saved.getStatus(), user, null);
+        if (saved.getStatus() == OrderStatus.READY) {
+            dispatchService.onOrderReady(saved, user);    // R-DLV-01: dispatch starts only once READY
+        }
         return saved;
     }
 
@@ -129,9 +156,14 @@ public class OrderServiceImpl implements OrderService {
         Order order = findOrderById(orderId);
         permissionResolver.requireCancel(user,order); //refactored with Strategy method
         OrderStatus from = order.getStatus();
-        order.cancelByCustomer();
+        if (user.hasRole(Role.OPERATOR)) {
+            order.cancelByOperator();
+        } else {
+            order.cancelByCustomer();
+        }
         orderRepository.save(order);
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
+        creditRefundService.refund(order, "Order cancelled", user);    // Automatic Credit Refund
     }
 
 

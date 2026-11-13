@@ -1,0 +1,306 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.panel {
+  border: 1px solid #d9d9e0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: #fff;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.panelTitle {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+}
+
+.statusOFFLINE {
+  background: #eceff1;
+  color: #455a64;
+  border-color: #b0bec5;
+}
+
+.statusIDLE {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-color: #81c784;
+}
+
+.statusASSIGNED {
+  background: #fff8e1;
+  color: #8a5a00;
+  border-color: #ffca28;
+}
+
+.statusCARRYING {
+  background: #e3f2fd;
+  color: #0d47a1;
+  border-color: #64b5f6;
+}
+
+.hint {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.dutyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.switchBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid #b0bec5;
+  border-radius: 999px;
+  background: #fafafa;
+  color: #37474f;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.switchOn {
+  border-color: #81c784;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.switchTrack {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #b0bec5;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.switchOn .switchTrack {
+  background: #43a047;
+}
+
+.switchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.switchOn .switchThumb {
+  transform: translateX(16px);
+}
+
+.switchBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  font-size: 0.85rem;
+  padding: 6px 12px;
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.primaryBtn {
+  font-weight: 600;
+}
+
+.warning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #ffca28;
+  background: #fff8e1;
+  border-radius: 6px;
+}
+
+.warning p {
+  margin: 0;
+}
+
+.message {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.success {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.errorMsg {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.empty {
+  margin: 0;
+  color: #555;
+  font-style: italic;
+}
+
+.orderHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.steps {
+  list-style: none;
+  margin: 8px 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #78909c;
+  min-width: 0;
+}
+
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #b0bec5;
+  background: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.stepLabel {
+  overflow-wrap: anywhere;
+}
+
+.stepActive {
+  color: #0d47a1;
+  font-weight: 700;
+}
+
+.stepActive .stepDot {
+  background: #1976d2;
+  border-color: #1976d2;
+  color: #fff;
+}
+
+.stepDone {
+  color: #1b5e20;
+}
+
+.stepDone .stepDot {
+  background: #43a047;
+  border-color: #43a047;
+  color: #fff;
+}
+
+.fieldList {
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+  gap: 6px 12px;
+}
+
+.fieldList dt {
+  font-weight: 600;
+}
+
+.fieldList dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.coords {
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: #eee;
+  color: #455a64;
+}
+
+.items {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: #eee;
+}
+
+@media (max-width: 360px) {
+  .fieldList {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .fieldList dd {
+    margin-bottom: 6px;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+}

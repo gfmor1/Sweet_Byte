@@ -1,5 +1,7 @@
 package com.sweetbyte.eats.application.service;
 
+import java.math.BigDecimal;
+
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.enums.MenuItemStatus;
@@ -84,7 +86,7 @@ public class MenuServiceImpl implements MenuService{
     }
 
     @Override
-    public MenuItem addMenuItem(Long restaurantID, String name, Double price, User user){
+    public MenuItem addMenuItem(Long restaurantID, String name, BigDecimal price, User user){
         permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load the restaurant where the item belongs to
         Restaurant restaurant = loadRestaurant(restaurantID);
@@ -99,7 +101,7 @@ public class MenuServiceImpl implements MenuService{
     }
 
     @Override
-    public MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, Double price, User user){
+    public MenuItem updateMenuItem(Long restaurantID, Long menuItemID, String name, BigDecimal price, User user){
         permissionResolver.requireManageRestaurant(user, restaurantID); //refactored with strategy method
         //Load menu item and make sure it belongs to the restaurant
         MenuItem menuItem = loadOwnedMenuItem(restaurantID, menuItemID);

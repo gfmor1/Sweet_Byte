@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
-    "start": "next start"
+    "start": "next start -p 3001"
   },
   "keywords": [],
   "author": "",
@@ -13,8 +13,10 @@
   "description": "",
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "leaflet": "^1.9.4",
     "next": "^16.4.3",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-leaflet": "^5.0.0"
   }
 }

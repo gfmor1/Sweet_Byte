@@ -106,7 +106,7 @@ public abstract class User {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof User other)) return false;
-        return userId != null && userId.equals(other.userId);
+        return userId != null && userId.equals(other.getUserId());
     }
 
     @Override

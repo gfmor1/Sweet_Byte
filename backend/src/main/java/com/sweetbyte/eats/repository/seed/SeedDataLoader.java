@@ -71,8 +71,7 @@ public class SeedDataLoader implements ApplicationRunner {
         if (seedUsers) {
             for (SeedData.CustomerSeed c : seed.customers()) {
                 if (userRepository.existsByEmail(c.email())) continue;
-                userRepository.save(new Customer(authAccount(c.email(), c.password()), c.name(), c.email(),
-                        c.deliveryAddress(), c.latitude(), c.longitude()));
+                userRepository.save(new Customer(authAccount(c.email(), c.password()), c.name(), c.email()));
                 created++;
             }
 

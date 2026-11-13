@@ -271,9 +271,6 @@
     {
       "name": "Demo Customer",
       "email": "customer@sweetbyte.test",
-      "deliveryAddress": "1455 De Maisonneuve Blvd W, Montreal",
-      "latitude": 45.4971,
-      "longitude": -73.5788,
       "password": "demo123"
     }
   ],

@@ -34,6 +34,11 @@ public class Restaurant {
     @Column(nullable = false)
     private double longitude;
 
+    // Street address typed by the owner; the coordinates above are its geocoded position.
+    // Nullable: restaurants created before addresses existed have none.
+    @Column(length = 300)
+    private String address;
+
     // Required by JPA to load rows from the database. Not for our code.
     protected Restaurant() { }
 
@@ -50,6 +55,7 @@ public class Restaurant {
     public RestaurantStatus getStatus() { return status; }
     public double getLatitude()         { return latitude; }
     public double getLongitude()        { return longitude; }
+    public String getAddress()          { return address; }
 
     // ---- behaviour ----
     // only an open restaurant can take new orders.
@@ -84,12 +90,19 @@ public class Restaurant {
         this.longitude = longitude;
     }
 
+    // The owner sets the restaurant's street address; latitude/longitude are its geocoded position.
+    public void relocate(String address, double latitude, double longitude) {
+        String text = User.requireText(address, "address");
+        relocate(latitude, longitude);
+        this.address = text;
+    }
+
     // ---- identity (same approach as Order) ----
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Restaurant other)) return false;
-        return restaurantId != null && restaurantId.equals(other.restaurantId);
+        return restaurantId != null && restaurantId.equals(other.getRestaurantId());
     }
 
     //It gives every object of the class the same “label” so Java can always find it in a set or map, 

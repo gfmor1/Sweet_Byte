@@ -1,6 +1,7 @@
 package com.sweetbyte.eats.ui.controller;
 
 import com.sweetbyte.eats.application.exceptions.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -46,6 +47,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> notImplemented(RuntimeException e) {
         return error(HttpStatus.NOT_IMPLEMENTED, e.getMessage());
     }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String,Object>> handleConflict(DataIntegrityViolationException e) {
+        return error(HttpStatus.CONFLICT, "This ledger entry already exists.");
+    }
+
+
 
 
 

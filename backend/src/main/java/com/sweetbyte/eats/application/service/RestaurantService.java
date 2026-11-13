@@ -25,6 +25,9 @@ public interface RestaurantService {
     //UC I - Manage Restaurant Configuration
     Restaurant changeStatus(Long restaurantID, RestaurantStatus status, User user);
 
+    // UC I - the owner sets the restaurant's address (geocoded to coordinates by the frontend)
+    Restaurant relocateRestaurant(Long restaurantID, String address, double latitude, double longitude, User user);
+
     //UC IV - Coordinate Order
     PreparationQueue getPreparationQueue(Long restaurantID, User user);
 

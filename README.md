@@ -33,9 +33,9 @@ Requires Java 21 and Node 22.
    | macOS / Linux | `scripts/build-local.sh` |
    | Windows (PowerShell) | `scripts\build-local.ps1` |
 
-   Both build and run the backend on :8080 and the frontend on :3000. Add `--build-only` (`-BuildOnly` on Windows) to build without running.
+   Both build and run the backend on :8080 and the frontend on :3001. Add `--build-only` (`-BuildOnly` on Windows) to build without running.
    On Windows you can also use Git Bash or WSL with the `.sh` script. If PowerShell blocks the script, run `powershell -ExecutionPolicy Bypass -File scripts\build-local.ps1`.
-2. Verify: `http://localhost:8080/api/events` returns `[]`, then open `http://localhost:3000`.
+2. Verify: `http://localhost:8080/api/events` returns `[]`, then open `http://localhost:3001`.
 
 ## Configuration
 
