@@ -7,7 +7,10 @@ import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
+import com.sweetbyte.eats.application.model.CardDetails;
 import com.sweetbyte.eats.application.model.Customer;
+import com.sweetbyte.eats.application.model.Fare;
+import com.sweetbyte.eats.application.model.Payment;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.User;
@@ -48,22 +51,32 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities, User user) {
+    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities,
+                            String deliveryAddress, Double latitude, Double longitude,
+                            CardDetails card, User user) {
         if (itemQuantities.isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
             throw new PermissionDeniedException("Only a customer can place an order");
+        if (latitude == null || longitude == null)
+            throw new IllegalArgumentException("Delivery coordinates are required");
+        if (card == null)
+            throw new IllegalArgumentException("Payment information is required");
         Customer customer = (Customer) user;
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new NotFoundException("Restaurant", restaurantId));
-        Order order = new Order(customer, restaurant);
+        Order order = new Order(customer, restaurant, deliveryAddress, latitude, longitude);
         itemQuantities.forEach((menuItemId, quantity) -> {
             MenuItem menuItem = menuItemRepository.findById(menuItemId)
                 .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
             order.addLine(menuItem, quantity);
         });
+        // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
+        Fare fare = pricingService.computeFare(order);
+        order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
+                card.expMonth(), card.expYear(), fare.getTotal()));
         Order saved = orderRepository.save(order);
-        pricingService.recordFare(saved);
+        pricingService.recordFare(saved);    // new BillingRecord for this order (same transaction)
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
         return saved;
     }

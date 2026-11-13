@@ -23,8 +23,7 @@ public record SeedData(List<RestaurantSeed> restaurants,
 
     public record UserSeed(String name, String email, String password) {}
 
-    public record CustomerSeed(String name, String email, String password,
-                               String deliveryAddress, double latitude, double longitude) {}
+    public record CustomerSeed(String name, String email, String password) {}
 
     public record CourierSeed(String name, String email, String password,
                               double latitude, double longitude) {}

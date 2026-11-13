@@ -40,10 +40,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public Customer registerCustomer(UUID supabaseUid, String email, String name, String deliveryAddress) {
+    public Customer registerCustomer(UUID supabaseUid, String email, String name) {
         requireNotRegistered(supabaseUid, email);
-        return userRepository.save(new Customer(supabaseUid, name, email,
-                deliveryAddress, DEFAULT_LATITUDE, DEFAULT_LONGITUDE));
+        return userRepository.save(new Customer(supabaseUid, name, email));
     }
 
     @Override

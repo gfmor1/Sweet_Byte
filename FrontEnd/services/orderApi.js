@@ -33,10 +33,13 @@ longitude: order.longitude,
   };
 }
 
+// card = saved card from paymentApi.getSavedCard: { brand, last4, holder, expMonth, expYear }
+// (never the full number or CVV). The backend stores it on the order and bills the fare total.
 export async function placeOrder(
   restaurantId,
   selectedItems,
-  delivery
+  delivery,
+  card
 ) {
   if (
     !delivery?.deliveryAddress?.trim() ||
@@ -57,6 +60,16 @@ export async function placeOrder(
       deliveryAddress: delivery.deliveryAddress.trim(),
       latitude: delivery.latitude,
       longitude: delivery.longitude,
+
+      payment: card
+        ? {
+            brand: card.brand,
+            last4: card.last4,
+            holder: card.holder,
+            expMonth: card.expMonth,
+            expYear: card.expYear,
+          }
+        : null,
 
       lines: selectedItems.map((item) => ({
         menuItemId: item.id,

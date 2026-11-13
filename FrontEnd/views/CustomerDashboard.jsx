@@ -20,6 +20,7 @@ import CustomerPaymentsPanel from "../features/payment/CustomerPaymentsPanel";
 import {
   attachPaymentToOrder,
   chargeOrder,
+  getSavedCard,
   paymentsEnabled,
 } from "../services/paymentApi";
 import { calculateFare } from "../services/config";
@@ -318,10 +319,17 @@ export default function CustomerDashboard({ user, onLog }) {
         }
       }
 
+      // The backend needs the card too: it saves it on the order and creates the billing record.
+      const card = await getSavedCard(user);
+      if (!card) {
+        throw new Error("Add a payment card first. Open the Payments tab to add one.");
+      }
+
       const order = await placeOrder(
         restaurantId,
         items,
-        destination
+        destination,
+        card
       );
 
       if (payment) {
