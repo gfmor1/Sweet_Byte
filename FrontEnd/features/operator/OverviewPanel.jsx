@@ -3,7 +3,6 @@
 import QueueBadge from "../shared/QueueBadge";
 import StatusPill from "./StatusPill";
 import RestaurantsPanel from "./RestaurantsPanel";
-import ResetPanel from "./ResetPanel";
 import { formatEnum } from "../../services/enumApi";
 import styles from "./operator.module.css";
 
@@ -46,7 +45,6 @@ export default function OverviewPanel({
   stalledCount,
   onPause,
   onReopen,
-  onReset,
 }) {
   const orderStatuses = [...new Set(orders.map((o) => o.status))];
 
@@ -92,8 +90,6 @@ export default function OverviewPanel({
         onPause={onPause}
         onReopen={onReopen}
       />
-
-      <ResetPanel disabled={disabled} onReset={onReset} />
     </div>
   );
 }
