@@ -90,6 +90,13 @@ public class Restaurant {
         this.longitude = longitude;
     }
 
+    // Reset: back to the seeded state (seed has no street address).
+    public void resetTo(RestaurantStatus seededStatus, double latitude, double longitude) {
+        relocate(latitude, longitude);
+        this.status = java.util.Objects.requireNonNull(seededStatus, "status is required");
+        this.address = null;
+    }
+
     // The owner sets the restaurant's street address; latitude/longitude are its geocoded position.
     public void relocate(String address, double latitude, double longitude) {
         String text = User.requireText(address, "address");

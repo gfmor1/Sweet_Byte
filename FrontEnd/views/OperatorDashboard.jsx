@@ -21,6 +21,7 @@ import OperatorPaymentsPanel from "../features/payment/OperatorPaymentsPanel";
 import { paymentsEnabled, refundPayment } from "../services/paymentApi";
 import LedgerTable from "../features/operator/LedgerTable";
 import RefundReviewPanel from "../features/operator/RefundReviewPanel";
+import ResetButton from "../features/operator/ResetButton";
 import styles from "../features/operator/operator.module.css";
 
 export default function OperatorDashboard({ user, onLog }) {
@@ -73,11 +74,6 @@ export default function OperatorDashboard({ user, onLog }) {
     }
   }
 
-  function handleRefresh() {
-    logRef.current?.({ command: "Refresh operator dashboard" });
-    refresh();
-  }
-
   if (!isOperator) {
     return <p role="alert">An operator account is required to access this dashboard.</p>;
   }
@@ -104,9 +100,6 @@ export default function OperatorDashboard({ user, onLog }) {
           }
           onReopen={(r) =>
             runCommand(`Reopen restaurant #${r.id}`, () => reopenRestaurant(r.id), `${r.name} reopened.`)
-          }
-          onReset={() =>
-            runCommand("Reset simulator", resetSystem, "Simulator restored to its initial state.")
           }
         />
       ),
@@ -208,13 +201,12 @@ export default function OperatorDashboard({ user, onLog }) {
           <span className={styles.muted}>
             {user.name || user.email || "Operator"} &middot; refreshes every 5s
           </span>
-          <button
-            className={`${styles.btn} ${styles.btnGhost}`}
-            disabled={busy || data.loading}
-            onClick={handleRefresh}
-          >
-            {data.loading ? "Refreshing..." : "Refresh"}
-          </button>
+          <ResetButton
+            disabled={busy}
+            onReset={() =>
+              runCommand("Reset system", resetSystem, "System restored to its initial state.")
+            }
+          />
         </div>
       </div>
 
