@@ -66,3 +66,13 @@
   .table td { display: flex; justify-content: space-between; border: 0; padding: 3px 10px; }
   .table td::before { content: attr(data-label); color: var(--p-muted); font-size: 0.78rem; }
 }
+
+/* Customer order card: "Refunded $X to Visa •••• 4242 on ..." */
+.refundedNotice {
+  margin: 0.4rem 0 0;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  background: var(--p-ok-soft, #eaf6ea);
+  color: var(--p-ok, #2e7d32);
+  font-size: 0.9rem;
+}

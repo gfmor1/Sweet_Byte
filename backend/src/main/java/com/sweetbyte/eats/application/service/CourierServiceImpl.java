@@ -114,7 +114,9 @@ public class CourierServiceImpl implements CourierService {
         order.deliver(courier);
         courier.finishDelivery();
         // simulated position: the courier is now at the drop-off
-        courier.updateLocation(order.getCustomer().getLatitude(), order.getCustomer().getLongitude());
+        if (order.getDeliveryLatitude() != null && order.getDeliveryLongitude() != null) {
+            courier.updateLocation(order.getDeliveryLatitude(), order.getDeliveryLongitude());
+        }
         courierRepository.save(courier);
         Order saved = orderRepository.save(order);
         pricingService.recordFare(saved);           // idempotent; orders placed before billing was wired have none

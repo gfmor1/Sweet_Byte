@@ -6,82 +6,112 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.sweetbyte.eats.application.enums.BillingRecordType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 /**
- * The fare saved for one order when it is placed (UC-PRC-01).
- * This is the amount the customer paid; it is never recomputed.
- * One row per order: the order id is the primary key.
+ * One money movement for an order (mock: no real payment provider is called).
+ * Append-only: rows are inserted and read, never updated.
  *
- * The fare itself is never updated. The only later change is the (mock) refund:
- * markRefunded() writes the refund fields once (full fare), so billing shows the money
- * went back to the customer. No real payment provider is called.
+ * PAYMENT: written when the order is placed (UC-PRC-01). amount = +fare total.
+ * REFUND:  written by the Automatic Credit Refund. amount = -(fare total), full refund only.
+ *
+ * An order has at most one PAYMENT and at most one REFUND (unique order_id + type),
+ * so a refunded order appears twice. Both rows carry the fare breakdown that was charged.
  */
 @Entity
-@Table(name = "billing_records")
+@Table(name = "billing_records",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"order_id", "type"}),
+        indexes = @Index(columnList = "order_id"))
 public class BillingRecord {
 
     @Id
-    @Column(nullable = false, updatable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "order_id", nullable = false, updatable = false)
     private Long orderId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false, length = 10)
+    private BillingRecordType type;
+
+    // The fare that was charged (copied onto the refund row: full refund of the same fare).
     @Embedded
     private Fare fare;
+
+    // Signed: +total for PAYMENT, -total for REFUND, so SUM(amount) per order = what the customer is out.
+    @Column(nullable = false, updatable = false, precision = 10, scale = 2)
+    private BigDecimal amount;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    // ---- mock refund (Automatic Credit Refund), all null until refunded ----
-    @Column(precision = 10, scale = 2)
-    private BigDecimal refundedAmount;
+    // Stands in for the payment provider's transaction id.
+    @Column(nullable = false, updatable = false)
+    private UUID reference;
 
-    private Instant refundedAt;
-
-    // Stands in for the payment provider's refund transaction id.
-    private UUID refundReference;
+    @Column(updatable = false)          // REFUND only, optional
+    private String reason;
 
     // Required by JPA. Not for our code.
     protected BillingRecord() { }
 
-    public BillingRecord(Long orderId, Fare fare) {
+    private BillingRecord(Long orderId, BillingRecordType type, Fare fare, BigDecimal amount, String reason) {
         this.orderId = Objects.requireNonNull(orderId, "orderId");
+        this.type = Objects.requireNonNull(type, "type");
         this.fare = Objects.requireNonNull(fare, "fare");
+        this.amount = amount.setScale(2, RoundingMode.HALF_UP);
         this.createdAt = Instant.now();
+        this.reference = UUID.randomUUID();
+        this.reason = (reason == null || reason.isBlank()) ? null : reason.trim();
     }
 
-    // Mock "return the payment": full refund only, the whole fare goes back to the customer.
-    // At most once per order.
-    public void markRefunded() {
-        if (isRefunded()) {
-            throw new IllegalStateException("Order " + orderId + " was already refunded");
+    // The customer pays the fare at placement.
+    public static BillingRecord payment(Long orderId, Fare fare) {
+        Objects.requireNonNull(fare, "fare");
+        return new BillingRecord(orderId, BillingRecordType.PAYMENT, fare, fare.getTotal(), null);
+    }
+
+    // Mock "return the payment": full refund of a recorded PAYMENT.
+    public static BillingRecord refundOf(BillingRecord payment, String reason) {
+        Objects.requireNonNull(payment, "payment");
+        if (payment.type != BillingRecordType.PAYMENT) {
+            throw new IllegalArgumentException("A refund must reverse a PAYMENT record");
         }
-        this.refundedAmount = fare.getTotal().setScale(2, RoundingMode.HALF_UP);
-        this.refundedAt = Instant.now();
-        this.refundReference = UUID.randomUUID();
+        return new BillingRecord(payment.orderId, BillingRecordType.REFUND, payment.fare,
+                payment.amount.negate(), reason);
     }
 
-    public boolean isRefunded() { return refundedAt != null; }
-
+    public Long getId() { return id; }
     public Long getOrderId() { return orderId; }
+    public BillingRecordType getType() { return type; }
     public Fare getFare() { return fare; }
+    public BigDecimal getAmount() { return amount; }
     public Instant getCreatedAt() { return createdAt; }
-    public BigDecimal getRefundedAmount() { return refundedAmount; }
-    public Instant getRefundedAt() { return refundedAt; }
-    public UUID getRefundReference() { return refundReference; }
+    public UUID getReference() { return reference; }
+    public String getReason() { return reason; }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof BillingRecord other)) return false;
-        return orderId.equals(other.orderId);
+        return id != null && id.equals(other.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(orderId);
+        return getClass().hashCode();
     }
 }

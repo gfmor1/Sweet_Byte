@@ -19,6 +19,7 @@ import com.sweetbyte.eats.application.exceptions.InvalidTransitionException;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -75,19 +76,58 @@ public class Order {
     private Instant cancelledAt;
     private String rejectionReason;
 
+    // ---- where this order goes (chosen at checkout, not stored on the customer) ----
+    // Nullable in the database only because orders placed before this change have none;
+    // the constructor always requires them.
+    @Column(updatable = false)
+    private String deliveryAddress;
+
+    @Column(updatable = false)
+    private Double deliveryLatitude;
+
+    @Column(updatable = false)
+    private Double deliveryLongitude;
+
+    // How the customer paid (mock). Null only for orders placed before payments were wired.
+    @Embedded
+    private Payment payment;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderLine> lines = new ArrayList<>();
 
     protected Order() { }
 
-    public Order(Customer customer, Restaurant restaurant) {
+    public Order(Customer customer, Restaurant restaurant,
+                 String deliveryAddress, double deliveryLatitude, double deliveryLongitude) {
         this.customer = Objects.requireNonNull(customer, "customer is required");
         this.restaurant = Objects.requireNonNull(restaurant, "restaurant is required");
         if (!restaurant.canAcceptOrders()) {                       // R-ORD-02
             throw new IllegalStateException(restaurant.getName() + " is not accepting orders");
         }
+        if (deliveryAddress == null || deliveryAddress.isBlank()) {
+            throw new IllegalArgumentException("A delivery address is required");
+        }
+        if (deliveryLatitude < -90 || deliveryLatitude > 90
+                || deliveryLongitude < -180 || deliveryLongitude > 180) {
+            throw new IllegalArgumentException("Delivery coordinates are out of range");
+        }
+        this.deliveryAddress = deliveryAddress.trim();
+        this.deliveryLatitude = deliveryLatitude;
+        this.deliveryLongitude = deliveryLongitude;
         this.status = OrderStatus.PLACED;
         this.placedAt = Instant.now();
+    }
+
+    // Attach the (mock) payment, once, before the order is saved.
+    public void pay(Payment newPayment) {
+        Objects.requireNonNull(newPayment, "payment is required");
+        if (orderId != null) {
+            throw new IllegalStateException("Payment must be attached before the order is saved");
+        }
+        if (payment != null) {
+            throw new IllegalStateException("Order is already paid");
+        }
+        payment = newPayment;
     }
 
     // ---- building the order (only before it is saved) ----
@@ -106,9 +146,12 @@ public class Order {
     }
 
     @PrePersist
-    private void checkHasLines() {
+    private void checkHasLinesAndPayment() {
         if (lines.isEmpty()) {
             throw new IllegalStateException("An order needs at least one line");
+        }
+        if (payment == null) {
+            throw new IllegalStateException("An order must be paid before it is placed");
         }
     }
 
@@ -242,6 +285,10 @@ public class Order {
     public Instant getRejectedAt()      { return rejectedAt; }
     public Instant getCancelledAt()     { return cancelledAt; }
     public String getRejectionReason()  { return rejectionReason; }
+    public String getDeliveryAddress()  { return deliveryAddress; }
+    public Double getDeliveryLatitude() { return deliveryLatitude; }
+    public Double getDeliveryLongitude(){ return deliveryLongitude; }
+    public Payment getPayment()         { return payment; }
     public List<OrderLine> getLines()   { return Collections.unmodifiableList(lines); }
 
     public boolean isTerminal() {

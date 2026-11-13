@@ -13,7 +13,7 @@ import com.sweetbyte.eats.application.model.User;
 public interface AuthService {
     User currentUser(UUID supabaseUid);
 
-    Customer registerCustomer(UUID supabaseUid, String email, String name, String deliveryAddress);
+    Customer registerCustomer(UUID supabaseUid, String email, String name);
 
     // The owner registers together with a new restaurant
     RestaurantOwner registerRestaurantOwner(UUID supabaseUid, String email, String name, String restaurantName);

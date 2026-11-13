@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sweetbyte.eats.application.model.CardDetails;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.service.AuthService;
@@ -41,7 +42,16 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse placeOrder(@AuthenticationPrincipal Jwt jwt, @RequestBody PlaceOrderRequest orderRequest) {
         User user = currentUser(jwt);
-        Order order = orderService.placeOrder(Long.valueOf(orderRequest.restaurantId()), orderRequest.toItemQuantities(), user);
+        PlaceOrderRequest.Card card = orderRequest.payment();
+        Order order = orderService.placeOrder(
+                Long.valueOf(orderRequest.restaurantId()),
+                orderRequest.toItemQuantities(),
+                orderRequest.deliveryAddress(),
+                orderRequest.latitude(),
+                orderRequest.longitude(),
+                card == null ? null
+                        : new CardDetails(card.brand(), card.last4(), card.holder(), card.expMonth(), card.expYear()),
+                user);
         return OrderResponse.from(order);
     }
 

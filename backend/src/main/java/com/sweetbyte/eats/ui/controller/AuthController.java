@@ -38,7 +38,7 @@ public class AuthController {
     public CustomerMeResponse registerCustomer(@AuthenticationPrincipal Jwt jwt,
                                                @RequestBody CustomerRegisterRequest body) {
         return CustomerMeResponse.from(authService.registerCustomer(
-                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name(), body.deliveryAddress()));
+                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name()));
     }
 
     // POST /api/auth/register/restaurant-owner  (after supabase.auth.signUp)

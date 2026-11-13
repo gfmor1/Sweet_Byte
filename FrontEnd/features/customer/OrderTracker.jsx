@@ -1,6 +1,7 @@
 "use client";
 
 import { can, explain } from "../../services/permissions";
+import RefundedNotice from "../payment/RefundedNotice";
 import { formatEnum } from "../../services/enumApi";
 import OrderSummary from "../pricing/OrderSummary";
 import OrderFare from "../pricing/OrderFare";
@@ -67,6 +68,7 @@ export function OrderTimeline({ status }) {
 
 export default function OrderTracker({
   order,
+  payment,
   role = "CUSTOMER",
   cancelling,
   onCancel,
@@ -142,6 +144,8 @@ export default function OrderTracker({
               ". The refund appears separately in history; the summary below shows the original charge."}
           </p>
         )}
+
+        {terminal && <RefundedNotice payment={payment} />}
 
         {!terminal && order.reason && (
           <p className={styles.meta}>Reason: {order.reason}</p>

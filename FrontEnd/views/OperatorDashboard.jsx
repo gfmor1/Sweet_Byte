@@ -189,7 +189,7 @@ export default function OperatorDashboard({ user, onLog }) {
                 onRefund={(p) =>
                   runCommand(
                     `Refund payment #${p.paymentId}`,
-                    () => refundPayment(p.paymentId),
+                    () => refundPayment(p),
                     `Payment #${p.paymentId} refunded.`
                   )
                 }

@@ -3,7 +3,6 @@ package com.sweetbyte.eats.ui.dto;
 import java.util.List;
 
 import com.sweetbyte.eats.application.enums.OrderStatus;
-import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
 
@@ -17,13 +16,12 @@ public record ActiveDeliveryResponse(
         double restaurantLatitude,
         double restaurantLongitude,
         String deliveryAddress,
-        double customerLatitude,
-        double customerLongitude,
+        Double customerLatitude,     // the order's delivery coordinates (null on legacy orders)
+        Double customerLongitude,
         List<OrderResponse.Line> items) {
 
     public static ActiveDeliveryResponse from(Order order) {
         Restaurant restaurant = order.getRestaurant();
-        Customer customer = order.getCustomer();
         return new ActiveDeliveryResponse(
                 order.getOrderId(),
                 order.getStatus(),
@@ -31,9 +29,9 @@ public record ActiveDeliveryResponse(
                 restaurant.getName(),
                 restaurant.getLatitude(),
                 restaurant.getLongitude(),
-                customer.getDeliveryAddress(),
-                customer.getLatitude(),
-                customer.getLongitude(),
+                order.getDeliveryAddress(),
+                order.getDeliveryLatitude(),
+                order.getDeliveryLongitude(),
                 order.getLines().stream().map(OrderResponse.Line::from).toList());
     }
 }

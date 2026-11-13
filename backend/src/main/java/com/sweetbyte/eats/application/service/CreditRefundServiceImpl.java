@@ -7,11 +7,16 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sweetbyte.eats.application.enums.BillingRecordType;
 import com.sweetbyte.eats.application.enums.OrderStatus;
+import com.sweetbyte.eats.application.enums.Role;
+import com.sweetbyte.eats.application.exceptions.NotFoundException;
+import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
 import com.sweetbyte.eats.application.model.BillingRecord;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.BillingRecordRepository;
+import com.sweetbyte.eats.repository.persistence.OrderRepository;
 
 @Service
 public class CreditRefundServiceImpl implements CreditRefundService {
@@ -24,9 +29,13 @@ public class CreditRefundServiceImpl implements CreditRefundService {
     private final PricingService pricingService;
     private final LedgerService ledgerService;
 
+    private final OrderRepository orderRepository;
+
     public CreditRefundServiceImpl(BillingRecordRepository billingRecordRepository,
                                    PricingService pricingService,
-                                   LedgerService ledgerService) {
+                                   LedgerService ledgerService,
+                                   OrderRepository orderRepository) {
+        this.orderRepository = orderRepository;
         this.billingRecordRepository = billingRecordRepository;
         this.pricingService = pricingService;
         this.ledgerService = ledgerService;
@@ -43,10 +52,12 @@ public class CreditRefundServiceImpl implements CreditRefundService {
                     + " cannot be refunded while " + order.getStatus());
         }
 
-        // Billing: mock "return the payment" (full fare). Throws if already refunded.
-        BillingRecord billing = pricingService.recordFare(order);  // idempotent; older orders may have none
-        billing.markRefunded();
-        BillingRecord saved = billingRecordRepository.save(billing);
+        // Billing: mock "return the payment" (full fare) as a NEW REFUND row next to the PAYMENT row.
+        BillingRecord payment = pricingService.recordFare(order);  // idempotent; older orders may have none
+        if (billingRecordRepository.existsByOrderIdAndType(order.getOrderId(), BillingRecordType.REFUND)) {
+            throw new IllegalStateException("Order " + order.getOrderId() + " was already refunded");
+        }
+        BillingRecord saved = billingRecordRepository.save(BillingRecord.refundOf(payment, reason));
 
         // Ledger
         if (order.getStatus() == OrderStatus.DELIVERED) {
@@ -57,5 +68,15 @@ public class CreditRefundServiceImpl implements CreditRefundService {
             ledgerService.recordFinalState(order);
         }
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public BillingRecord refund(Long orderId, String reason, User actor) {
+        if (!actor.hasRole(Role.OPERATOR))
+            throw new PermissionDeniedException("Only an operator can refund an order");
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order", orderId));
+        return refund(order, reason, actor);
     }
 }

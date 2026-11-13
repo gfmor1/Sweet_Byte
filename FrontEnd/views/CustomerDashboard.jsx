@@ -18,11 +18,11 @@ import ActiveOrdersBar from "../features/customer/ActiveOrdersBar";
 import { courierMarker } from "../features/customer/normalizeCourier";
 import CustomerPaymentsPanel from "../features/payment/CustomerPaymentsPanel";
 import {
-  attachPaymentToOrder,
-  chargeOrder,
+  getMyPayments,
+  getSavedCard,
   paymentsEnabled,
 } from "../services/paymentApi";
-import { calculateFare } from "../services/config";
+import RefundedNotice from "../features/payment/RefundedNotice";
 import OrderHistory from "../features/pricing/OrderHistory";
 import OrderSummary from "../features/pricing/OrderSummary";
 import RefundPanel from "../features/refunds/RefundPanel";
@@ -56,6 +56,7 @@ export default function CustomerDashboard({ user, onLog }) {
   const [cancelling, setCancelling] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [paymentsKey, setPaymentsKey] = useState(0);
+  const [paymentsByOrder, setPaymentsByOrder] = useState({});
 
   const [activeTab, setActiveTab] = useState("restaurants");
   const [focusedOrderId, setFocusedOrderId] = useState(null);
@@ -111,6 +112,10 @@ export default function CustomerDashboard({ user, onLog }) {
     });
   }, []);
 
+  // refresh is stable ([] deps); read the current user through a ref
+  const userRef = useRef(user);
+  userRef.current = user;
+
   const refresh = useCallback(async () => {
     if (loading.current) return null;
 
@@ -121,9 +126,11 @@ export default function CustomerDashboard({ user, onLog }) {
     }
 
     try {
-      const [nextRestaurants, nextOrders] = await Promise.all([
+      const [nextRestaurants, nextOrders, nextPayments] = await Promise.all([
         getRestaurants(),
         getMyOrders(),
+        // payments only add refund info to the order cards: never block the orders on them
+        getMyPayments(userRef.current).catch(() => null),
       ]);
 
       const selectedId = selection.current;
@@ -144,6 +151,11 @@ export default function CustomerDashboard({ user, onLog }) {
 
       setRestaurants(nextRestaurants);
       setOrders(nextOrders);
+      if (Array.isArray(nextPayments)) {
+        setPaymentsByOrder(
+          Object.fromEntries(nextPayments.map((p) => [p.orderId, p]))
+        );
+      }
       setLoaded(true);
 
       if (
@@ -288,50 +300,21 @@ export default function CustomerDashboard({ user, onLog }) {
         longitude: delivery.longitude,
       };
 
-      // Preserve the existing payment flow.
-      let payment = null;
-
-      if (paymentsEnabled) {
-        onLog?.({
-          command: "Charge payment card",
-        });
-
-        try {
-          payment = await chargeOrder(user, {
-            amount: calculateFare(subtotal).total,
-          });
-
-          onLog?.({
-            command: "Charge payment card",
-            result: "Success",
-          });
-        } catch (chargeErr) {
-          setPaymentsKey((previous) => previous + 1);
-
-          const hint =
-            chargeErr.status === 402 &&
-            /card first/i.test(chargeErr.message)
-              ? " Open the Payments tab to add one."
-              : "";
-
-          throw new Error(chargeErr.message + hint);
-        }
+      // The backend charges the saved card (mock), stores it on the order
+      // and creates the PAYMENT billing record. Only brand/last4/holder/expiry are sent.
+      const card = paymentsEnabled ? await getSavedCard(user) : null;
+      if (!card) {
+        throw new Error("Add a payment card first. Open the Payments tab to add one.");
       }
 
       const order = await placeOrder(
         restaurantId,
         items,
-        destination
+        destination,
+        card
       );
 
-      if (payment) {
-        attachPaymentToOrder(
-          payment.paymentId,
-          order.id
-        ).catch(() => {});
-
-        setPaymentsKey((previous) => previous + 1);
-      }
+      setPaymentsKey((previous) => previous + 1);
 
       onLog?.({
         command: "Place Order",
@@ -643,6 +626,7 @@ export default function CustomerDashboard({ user, onLog }) {
             <OrderTracker
               key={order.id}
               order={order}
+              payment={paymentsByOrder[order.id]}
               role={role}
               cancelling={cancelling}
               onCancel={handleCancelOrder}
@@ -702,6 +686,8 @@ export default function CustomerDashboard({ user, onLog }) {
                       Delivery: {order.deliveryAddress}
                     </p>
                   )}
+
+                  <RefundedNotice payment={paymentsByOrder[order.id]} />
 
                   {openSummaries[order.id] && (
                     <OrderSummary

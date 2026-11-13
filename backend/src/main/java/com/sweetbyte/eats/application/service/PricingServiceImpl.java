@@ -1,5 +1,6 @@
 package com.sweetbyte.eats.application.service;
 
+import com.sweetbyte.eats.application.enums.BillingRecordType;
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.Order;
@@ -45,16 +46,16 @@ public class PricingServiceImpl implements PricingService{
     @Transactional
     public BillingRecord recordFare(Order order) {
         Objects.requireNonNull(order.getOrderId(), "Save the order before recording its fare");
-        // idempotent: if it already exists, keep the original (the fare never changes)
-        return billingRecordRepository.findById(order.getOrderId())
+        // idempotent: if the PAYMENT row already exists, keep the original (the fare never changes)
+        return billingRecordRepository.findByOrderIdAndType(order.getOrderId(), BillingRecordType.PAYMENT)
                 .orElseGet(() -> billingRecordRepository.save(
-                        new BillingRecord(order.getOrderId(), computeFare(order))));
+                        BillingRecord.payment(order.getOrderId(), computeFare(order))));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Fare getFare(Long orderId) {
-        return billingRecordRepository.findById(orderId)
+        return billingRecordRepository.findByOrderIdAndType(orderId, BillingRecordType.PAYMENT)
                 .map(BillingRecord::getFare)
                 .orElseThrow(() -> new NotFoundException("Billing record for order", orderId));
     }
