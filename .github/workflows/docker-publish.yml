@@ -4,6 +4,10 @@
 # Tags: latest (main), the branch name, sha-<short sha>, and vX.Y.Z for git tags v*.
 # No secrets or build args needed: everything is hardcoded in the Dockerfile / application.properties.
 # (GITHUB_TOKEN below is provided automatically by GitHub, nothing to configure.)
+#
+# Multi-arch: linux/amd64 (Intel Macs, Windows, Linux) + linux/arm64 (Apple Silicon Macs, ARM Linux).
+# Docker on Mac and Windows runs Linux containers, so these two cover all three OSes;
+# `docker pull` picks the right one automatically.
 name: Docker image
 
 on:
@@ -23,6 +27,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # emulates arm64 on the amd64 runner
+      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -50,6 +57,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
