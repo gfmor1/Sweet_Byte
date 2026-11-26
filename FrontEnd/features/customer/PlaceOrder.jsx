@@ -9,6 +9,7 @@ import DeliveryAddressPicker from "./DeliveryAddressPicker";
 import FarePreview from "../pricing/FarePreview";
 import { money } from "../pricing/FareBreakdown";
 import styles from "./customer.module.css";
+import { isValidDelivery } from "./deliveryAddress.mjs";
 
 export default function PlaceOrder({
   restaurant,
@@ -106,17 +107,10 @@ export default function PlaceOrder({
       return;
     }
 
-    if (
-      typeof delivery?.deliveryAddress !== "string" ||
-      !delivery.deliveryAddress.trim() ||
-      !Number.isFinite(delivery.latitude) ||
-      !Number.isFinite(delivery.longitude) ||
-      Math.abs(delivery.latitude) > 90 ||
-      Math.abs(delivery.longitude) > 180
-    ) {
-      setError("Please select a valid delivery address.");
-      return;
-    }
+    if (!isValidDelivery(delivery)) {
+  setError("Please select a valid delivery address.");
+  return;
+}
 
     const orderLines = selectedItems.map((item) => ({
       id: item.id,

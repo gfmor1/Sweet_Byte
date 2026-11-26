@@ -27,6 +27,7 @@ import OrderHistory from "../features/pricing/OrderHistory";
 import OrderSummary from "../features/pricing/OrderSummary";
 import RefundPanel from "../features/refunds/RefundPanel";
 import styles from "../features/customer/customer.module.css";
+import { isValidDelivery } from "../features/customer/deliveryAddress.mjs";
 
 import {
   getMenu,
@@ -283,14 +284,7 @@ export default function CustomerDashboard({ user, onLog }) {
     });
 
     try {
-      if (
-        typeof delivery?.deliveryAddress !== "string" ||
-        !delivery.deliveryAddress.trim() ||
-        !Number.isFinite(delivery.latitude) ||
-        !Number.isFinite(delivery.longitude) ||
-        Math.abs(delivery.latitude) > 90 ||
-        Math.abs(delivery.longitude) > 180
-      ) {
+      if (!isValidDelivery(delivery)) {
         throw new Error("Please select a valid delivery address.");
       }
 
@@ -409,7 +403,7 @@ export default function CustomerDashboard({ user, onLog }) {
     }
   }
 
-  async function handleManualRefresh() {
+     async function handleManualRefresh() {
     onLog?.({
       command: REFRESH_COMMAND,
     });
