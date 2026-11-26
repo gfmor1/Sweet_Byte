@@ -1,0 +1,68 @@
+# SweetByte on the SOEN 343 demo platform.
+#   web       nginx, public: / -> frontend, /api/ -> backend
+#   frontend  Next.js (next start :3001)
+#   backend   Spring Boot (:8080), schema by JPA, demo data by SeedDataLoader at startup
+#   db        local Postgres (replaces the hosted Supabase database)
+# Login still uses the team's hosted Supabase Auth project.
+# Replace each REPLACE-WITH-COMMIT-SHA with the tag printed by the "Publish demo images" workflow.
+x-demo:
+  web: web
+  port: 80
+
+services:
+  web:
+    image: ghcr.io/gfmor1/sweet_byte-web:REPLACE-WITH-COMMIT-SHA
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/gfmor1/sweet_byte-frontend:REPLACE-WITH-COMMIT-SHA
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/3001'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  backend:
+    image: ghcr.io/gfmor1/sweet_byte-backend:REPLACE-WITH-COMMIT-SHA
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sweetbyte
+      SPRING_DATASOURCE_USERNAME: sweetbyte
+      SPRING_DATASOURCE_PASSWORD: demo-password
+      # Creates/finds the demo users' Supabase Auth accounts at startup. Without it the app starts,
+      # but only restaurants and menus are seeded (no demo logins). Save it on the platform's
+      # Secrets page first, or delete this line.
+      SUPABASE_SERVICE_ROLE_KEY: ${secret:SUPABASE_SERVICE_ROLE_KEY}
+      # trust X-Forwarded-* from the platform edge (passed on by nginx)
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 30s
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: sweetbyte
+      POSTGRES_USER: sweetbyte
+      POSTGRES_PASSWORD: demo-password
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U sweetbyte -d sweetbyte"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dbdata:

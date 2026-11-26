@@ -1,0 +1,52 @@
+# Starter kit: the shape the platform likes best.
+#   web      nginx: serves your frontend's production build and proxies /api to backend (public)
+#   backend  your API (Spring Boot, Express, Django, ...)
+#   db       Postgres with a healthcheck and a named volume
+# Replace each `image:` with the line printed by the GitHub Actions workflow (see README.md).
+x-demo:
+  web: web
+  port: 80
+
+services:
+  web:
+    image: ghcr.io/your-team/your-repo-web:0123456789abcdef0123456789abcdef01234567
+    depends_on:
+      backend:
+        condition: service_healthy   # the demo goes live only when the API answers
+
+  backend:
+    image: ghcr.io/your-team/your-repo-backend:0123456789abcdef0123456789abcdef01234567
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/app
+      SPRING_DATASOURCE_USERNAME: app
+      SPRING_DATASOURCE_PASSWORD: demo-password
+      # Keep the JVM inside the memory cap of your group (see "Limits" in README.md).
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60
+    healthcheck:
+      # Healthy when port 8080 accepts a connection. Uses bash, which most Java images have
+      # (many have no curl). Spring Boot needs 15 to 40 seconds to start.
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: demo-password
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dbdata:

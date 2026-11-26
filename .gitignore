@@ -55,3 +55,6 @@ HELP.md
 # Claude Code local settings
 .claude/settings.local.json
 .DS_Store
+
+# demo rehearsal copy (see demo/rehearse.yaml)
+demo/compose.local.yaml
