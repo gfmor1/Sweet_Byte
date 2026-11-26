@@ -54,6 +54,16 @@ public class OrderServiceImpl implements OrderService {
     public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities,
                             String deliveryAddress, Double latitude, Double longitude,
                             CardDetails card, User user) {
+        validatePlacement(itemQuantities, latitude, longitude, card, user);   // input checks, before any DB access
+        Order order = buildOrder(restaurantId, itemQuantities, deliveryAddress,
+                latitude, longitude, (Customer) user);                         // safe cast: role checked above
+        chargeCard(order, card);
+        return saveAndRecord(order, user);
+    }
+
+    // The order of the checks is part of the contract (which message wins): items -> role -> coordinates -> card.
+    private void validatePlacement(Map<Long, Integer> itemQuantities, Double latitude, Double longitude,
+                                   CardDetails card, User user) {
         if (itemQuantities.isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
@@ -62,19 +72,26 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Delivery coordinates are required");
         if (card == null)
             throw new IllegalArgumentException("Payment information is required");
-        Customer customer = (Customer) user;
+    }
+
+    private Order buildOrder(Long restaurantId, Map<Long, Integer> itemQuantities, String deliveryAddress,
+                             Double latitude, Double longitude, Customer customer) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
             .orElseThrow(() -> new NotFoundException("Restaurant", restaurantId));
         Order order = new Order(customer, restaurant, deliveryAddress, latitude, longitude);
-        itemQuantities.forEach((menuItemId, quantity) -> {
-            MenuItem menuItem = menuItemRepository.findById(menuItemId)
-                .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
-            order.addLine(menuItem, quantity);
-        });
-        // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
+        itemQuantities.forEach((menuItemId, quantity) ->
+                order.addLine(findMenuItem(menuItemId), quantity));
+        return order;
+    }
+
+    // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
+    private void chargeCard(Order order, CardDetails card) {
         Fare fare = pricingService.computeFare(order);
         order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
                 card.expMonth(), card.expYear(), fare.getTotal()));
+    }
+
+    private Order saveAndRecord(Order order, User user) {
         Order saved = orderRepository.save(order);
         pricingService.recordFare(saved);    // new BillingRecord for this order (same transaction)
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
@@ -171,6 +188,11 @@ public class OrderServiceImpl implements OrderService {
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
             .orElseThrow(() -> new NotFoundException("Order", orderId));
+    }
+
+    private MenuItem findMenuItem(Long menuItemId) {
+        return menuItemRepository.findById(menuItemId)
+            .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
     }
 
 }
