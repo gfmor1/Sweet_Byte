@@ -32,6 +32,7 @@ import com.sweetbyte.eats.application.model.MenuItem;
 import com.sweetbyte.eats.application.model.Operator;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.OrderLine;
+import com.sweetbyte.eats.application.model.PlaceOrderCommand;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.permission.OrderPermissionResolver;
@@ -135,7 +136,7 @@ class OrderServicePlaceOrderCharacterisationTest {
      */
     private Order place(Map<Long, Integer> items, String address, Double lat, Double lon,
                         CardDetails card, User user) {
-        return service.placeOrder(RESTAURANT_ID, items, address, lat, lon, card, user);
+        return service.placeOrder(new PlaceOrderCommand(RESTAURANT_ID, items, address, lat, lon, card), user);
     }
 
     /**

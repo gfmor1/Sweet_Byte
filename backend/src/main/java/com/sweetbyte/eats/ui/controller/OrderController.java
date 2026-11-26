@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sweetbyte.eats.application.model.CardDetails;
 import com.sweetbyte.eats.application.model.Order;
+import com.sweetbyte.eats.application.model.PlaceOrderCommand;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.service.AuthService;
 import com.sweetbyte.eats.application.service.OrderService;
@@ -43,15 +44,15 @@ public class OrderController {
     public OrderResponse placeOrder(@AuthenticationPrincipal Jwt jwt, @RequestBody PlaceOrderRequest orderRequest) {
         User user = currentUser(jwt);
         PlaceOrderRequest.Card card = orderRequest.payment();
-        Order order = orderService.placeOrder(
+        PlaceOrderCommand command = new PlaceOrderCommand(
                 Long.valueOf(orderRequest.restaurantId()),
                 orderRequest.toItemQuantities(),
                 orderRequest.deliveryAddress(),
                 orderRequest.latitude(),
                 orderRequest.longitude(),
                 card == null ? null
-                        : new CardDetails(card.brand(), card.last4(), card.holder(), card.expMonth(), card.expYear()),
-                user);
+                        : new CardDetails(card.brand(), card.last4(), card.holder(), card.expMonth(), card.expYear()));
+        Order order = orderService.placeOrder(command, user);
         return OrderResponse.from(order);
     }
 

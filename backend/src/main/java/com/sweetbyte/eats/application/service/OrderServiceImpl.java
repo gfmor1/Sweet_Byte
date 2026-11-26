@@ -1,6 +1,5 @@
 package com.sweetbyte.eats.application.service;
 import java.util.List;
-import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.enums.OrderStatus;
@@ -15,6 +14,7 @@ import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.model.MenuItem;
+import com.sweetbyte.eats.application.model.PlaceOrderCommand;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
@@ -51,35 +51,31 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities,
-                            String deliveryAddress, Double latitude, Double longitude,
-                            CardDetails card, User user) {
-        validatePlacement(itemQuantities, latitude, longitude, card, user);   // input checks, before any DB access
-        Order order = buildOrder(restaurantId, itemQuantities, deliveryAddress,
-                latitude, longitude, (Customer) user);                         // safe cast: role checked above
-        chargeCard(order, card);
+    public Order placeOrder(PlaceOrderCommand command, User user) {
+        validatePlacement(command, user);                        // input checks, before any DB access
+        Order order = buildOrder(command, (Customer) user);      // safe cast: role checked above
+        chargeCard(order, command.card());
         return saveAndRecord(order, user);
     }
 
     // The order of the checks is part of the contract (which message wins): items -> role -> coordinates -> card.
-    private void validatePlacement(Map<Long, Integer> itemQuantities, Double latitude, Double longitude,
-                                   CardDetails card, User user) {
-        if (itemQuantities.isEmpty())
+    private void validatePlacement(PlaceOrderCommand command, User user) {
+        if (command.itemQuantities().isEmpty())
             throw new IllegalArgumentException("Order needs at least one item");
         if (!user.hasRole(Role.CUSTOMER))
             throw new PermissionDeniedException("Only a customer can place an order");
-        if (latitude == null || longitude == null)
+        if (command.latitude() == null || command.longitude() == null)
             throw new IllegalArgumentException("Delivery coordinates are required");
-        if (card == null)
+        if (command.card() == null)
             throw new IllegalArgumentException("Payment information is required");
     }
 
-    private Order buildOrder(Long restaurantId, Map<Long, Integer> itemQuantities, String deliveryAddress,
-                             Double latitude, Double longitude, Customer customer) {
-        Restaurant restaurant = restaurantRepository.findById(restaurantId)
-            .orElseThrow(() -> new NotFoundException("Restaurant", restaurantId));
-        Order order = new Order(customer, restaurant, deliveryAddress, latitude, longitude);
-        itemQuantities.forEach((menuItemId, quantity) ->
+    private Order buildOrder(PlaceOrderCommand command, Customer customer) {
+        Restaurant restaurant = restaurantRepository.findById(command.restaurantId())
+            .orElseThrow(() -> new NotFoundException("Restaurant", command.restaurantId()));
+        Order order = new Order(customer, restaurant, command.deliveryAddress(),
+                command.latitude(), command.longitude());
+        command.itemQuantities().forEach((menuItemId, quantity) ->
                 order.addLine(findMenuItem(menuItemId), quantity));
         return order;
     }
