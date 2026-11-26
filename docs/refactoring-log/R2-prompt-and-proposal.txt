@@ -1,0 +1,314 @@
+
+❯ <ide_opened_file>The user opened the file
+  /Users/nadineseba/dev/Sweet_Byte/backend/src/test/java/com/sweetbyte/eats/app
+  lication/service/OrderServicePlaceOrderCharacterisationTest.java in the IDE.
+  This may or may not be related to the current task.</ide_opened_file>
+
+❯ I'm refactoring OrderServiceImpl.placeOrder in backend/src/main/java/com/swee
+  tbyte/eats/application/service/OrderServiceImpl.java (Java 21, Spring Boot
+  4). Smells: Long Method (it validates input, checks the role, loads the
+  restaurant and items, builds order lines, prices and charges the card, then
+  saves, records billing and emits an event) and Long Parameter List (7
+  parameters). I will later add a promo code validated at placement, but do not
+  add it now: propose a pure refactoring with no behaviour change. Error
+  messages and the order of the checks must stay identical; the
+  characterisation tests in OrderServicePlaceOrderCharacterisationTest must
+  pass with only the place(...) helper adapted to a new signature. Name the
+  refactorings from Fowler's catalogue, show the diff (including OrderService
+  and OrderController), and explain the alternatives you considered. Don't
+  apply the changes yet, only propose.
+
+  Listed 1 directory, ran 2 shell commands (ctrl+o to expand)
+
+⏺ Nothing is applied yet. This is the proposal. It changes 5 files, and only one
+  helper in the characterisation test.
+
+  Refactorings (Fowler, 2nd ed.)
+
+  ┌─────┬──────────────────────────────────────────┬────────────────────────┐
+  │  #  │               Refactoring                │         Fixes          │
+  ├─────┼──────────────────────────────────────────┼────────────────────────┤
+  │     │ Extract Function (1st ed.: Extract       │                        │
+  │ R2a │ Method), used 5 times:                   │ Long Method            │
+  │     │ validatePlacement, buildOrder,           │                        │
+  │     │ findMenuItem, chargeCard, saveAndRecord  │                        │
+  ├─────┼──────────────────────────────────────────┼────────────────────────┤
+  │     │ Introduce Parameter Object               │ Long Parameter List (7 │
+  │ R2b │ (PlaceOrderCommand), done with Change    │  parameters become 2)  │
+  │     │ Function Declaration                     │                        │
+  ├─────┼──────────────────────────────────────────┼────────────────────────┤
+  │     │ Move Function: the request-to-command    │ Controller noise;      │
+  │ R2c │ mapping moves from OrderController into  │ keeps the mapping next │
+  │     │ PlaceOrderRequest.toCommand(). This step │  to toItemQuantities() │
+  │     │  is optional.                            │                        │
+  └─────┴──────────────────────────────────────────┴────────────────────────┘
+
+  Do them in this order and run the tests after each one. Every step leaves the
+  build green.
+
+  Diff
+
+  New file application/model/PlaceOrderCommand.java (it goes next to
+  CardDetails, the existing checkout input type)
+  package com.sweetbyte.eats.application.model;
+
+  import java.util.Map;
+
+  // What the customer asks for at checkout. The acting user is passed
+  separately, like every other OrderService call.
+  // Deliberately no validation here: placeOrder owns the checks and their order
+  (see characterisation tests).
+  public record PlaceOrderCommand(Long restaurantId,
+                                  Map<Long, Integer> itemQuantities,
+                                  String deliveryAddress,
+                                  Double latitude,
+                                  Double longitude,
+                                  CardDetails card) { }
+
+  OrderService.java
+  -import java.util.Map;
+   ...
+  -import com.sweetbyte.eats.application.model.CardDetails;
+   import com.sweetbyte.eats.application.model.Order;
+  +import com.sweetbyte.eats.application.model.PlaceOrderCommand;
+   import com.sweetbyte.eats.application.model.User;
+   ...
+  -    Order placeOrder(Long restaurantId, Map<Long, Integer> itemQuantities,
+  -                     String deliveryAddress, Double latitude, Double
+  longitude,
+  -                     CardDetails card, User user);
+  +    Order placeOrder(PlaceOrderCommand command, User user);
+
+  OrderServiceImpl.java
+  -import java.util.Map;
+   ...
+  +import com.sweetbyte.eats.application.model.PlaceOrderCommand;
+   ...
+       @Override
+       @Transactional
+  -    public Order placeOrder(Long restaurantId, Map<Long, Integer>
+  itemQuantities,
+  -                            String deliveryAddress, Double latitude, Double
+  longitude,
+  -                            CardDetails card, User user) {
+  -        if (itemQuantities.isEmpty())
+  -            throw new IllegalArgumentException("Order needs at least one
+  item");
+  -        if (!user.hasRole(Role.CUSTOMER))
+  -            throw new PermissionDeniedException("Only a customer can place an
+  order");
+  -        if (latitude == null || longitude == null)
+  -            throw new IllegalArgumentException("Delivery coordinates are
+  required");
+  -        if (card == null)
+  -            throw new IllegalArgumentException("Payment information is
+  required");
+  -        Customer customer = (Customer) user;
+  -        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+  -            .orElseThrow(() -> new NotFoundException("Restaurant",
+  restaurantId));
+  -        Order order = new Order(customer, restaurant, deliveryAddress,
+  latitude, longitude);
+  -        itemQuantities.forEach((menuItemId, quantity) -> {
+  -            MenuItem menuItem = menuItemRepository.findById(menuItemId)
+  -                .orElseThrow(() -> new NotFoundException("Menu item",
+  menuItemId));
+  -            order.addLine(menuItem, quantity);
+  -        });
+  -        // Mock charge: the customer pays the fare total, computed by the
+  same pricing chain as billing.
+  -        Fare fare = pricingService.computeFare(order);
+  -        order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
+  -                card.expMonth(), card.expYear(), fare.getTotal()));
+  -        Order saved = orderRepository.save(order);
+  -        pricingService.recordFare(saved);    // new BillingRecord for this
+  order (same transaction)
+  -        eventService.record("Order", saved.getOrderId(), null,
+  saved.getStatus(), user, null);
+  -        return saved;
+  -    }
+  +    public Order placeOrder(PlaceOrderCommand command, User user) {
+  +        validatePlacement(command, user);                       // input
+  checks, before any DB access
+  +        Order order = buildOrder(command, (Customer) user);     // safe cast:
+  role checked above
+  +        chargeCard(order, command.card());
+  +        return saveAndRecord(order, user);
+  +    }
+  +
+  +    // Check order is part of the contract (which message wins): items ->
+  role -> coordinates -> card.
+  +    private void validatePlacement(PlaceOrderCommand command, User user) {
+  +        if (command.itemQuantities().isEmpty())
+  +            throw new IllegalArgumentException("Order needs at least one
+  item");
+  +        if (!user.hasRole(Role.CUSTOMER))
+  +            throw new PermissionDeniedException("Only a customer can place an
+  order");
+  +        if (command.latitude() == null || command.longitude() == null)
+  +            throw new IllegalArgumentException("Delivery coordinates are
+  required");
+  +        if (command.card() == null)
+  +            throw new IllegalArgumentException("Payment information is
+  required");
+  +    }
+  +
+  +    private Order buildOrder(PlaceOrderCommand command, Customer customer) {
+  +        Restaurant restaurant =
+  restaurantRepository.findById(command.restaurantId())
+  +            .orElseThrow(() -> new NotFoundException("Restaurant",
+  command.restaurantId()));
+  +        Order order = new Order(customer, restaurant,
+  command.deliveryAddress(),
+  +                command.latitude(), command.longitude());
+  +        command.itemQuantities().forEach((menuItemId, quantity) ->
+  +                order.addLine(findMenuItem(menuItemId), quantity));
+  +        return order;
+  +    }
+  +
+  +    // Mock charge: the customer pays the fare total, computed by the same
+  pricing chain as billing.
+  +    private void chargeCard(Order order, CardDetails card) {
+  +        Fare fare = pricingService.computeFare(order);
+  +        order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
+  +                card.expMonth(), card.expYear(), fare.getTotal()));
+  +    }
+  +
+  +    private Order saveAndRecord(Order order, User user) {
+  +        Order saved = orderRepository.save(order);
+  +        pricingService.recordFare(saved);    // new BillingRecord for this
+  order (same transaction)
+  +        eventService.record("Order", saved.getOrderId(), null,
+  saved.getStatus(), user, null);
+  +        return saved;
+  +    }
+   ...
+       private Order findOrderById(Long orderId) {
+           return orderRepository.findById(orderId)
+               .orElseThrow(() -> new NotFoundException("Order", orderId));
+       }
+  +
+  +    private MenuItem findMenuItem(Long menuItemId) {
+  +        return menuItemRepository.findById(menuItemId)
+  +            .orElseThrow(() -> new NotFoundException("Menu item",
+  menuItemId));
+  +    }
+
+  ui/dto/PlaceOrderRequest.java (R2c)
+  +import com.sweetbyte.eats.application.model.CardDetails;
+  +import com.sweetbyte.eats.application.model.PlaceOrderCommand;
+   ...
+  +    /* request body -> application command (no validation: the service owns
+  the checks) */
+  +    public PlaceOrderCommand toCommand() {
+  +        return new PlaceOrderCommand(
+  +                Long.valueOf(restaurantId),
+  +                toItemQuantities(),
+  +                deliveryAddress,
+  +                latitude,
+  +                longitude,
+  +                payment == null ? null
+  +                        : new CardDetails(payment.brand(), payment.last4(),
+  payment.holder(),
+  +                                          payment.expMonth(),
+  payment.expYear()));
+  +    }
+
+  OrderController.java
+  -import com.sweetbyte.eats.application.model.CardDetails;
+   ...
+       public OrderResponse placeOrder(@AuthenticationPrincipal Jwt jwt,
+  @RequestBody PlaceOrderRequest orderRequest) {
+           User user = currentUser(jwt);
+  -        PlaceOrderRequest.Card card = orderRequest.payment();
+  -        Order order = orderService.placeOrder(
+  -                Long.valueOf(orderRequest.restaurantId()),
+  -                orderRequest.toItemQuantities(),
+  -                orderRequest.deliveryAddress(),
+  -                orderRequest.latitude(),
+  -                orderRequest.longitude(),
+  -                card == null ? null
+  -                        : new CardDetails(card.brand(), card.last4(),
+  card.holder(), card.expMonth(), card.expYear()),
+  -                user);
+  +        Order order = orderService.placeOrder(orderRequest.toCommand(),
+  user);
+           return OrderResponse.from(order);
+       }
+
+  OrderServicePlaceOrderCharacterisationTest.java (only the place(...) helper
+  changes)
+  +import com.sweetbyte.eats.application.model.PlaceOrderCommand;
+   ...
+       private Order place(Map<Long, Integer> items, String address, Double lat,
+  Double lon,
+                           CardDetails card, User user) {
+  -        return service.placeOrder(RESTAURANT_ID, items, address, lat, lon,
+  card, user);
+  +        return service.placeOrder(new PlaceOrderCommand(RESTAURANT_ID, items,
+  address, lat, lon, card), user);
+       }
+
+  Why the behaviour doesn't change
+
+  - Error messages: all messages are copied unchanged. The two NotFoundException
+    calls keep the same ("Restaurant", id) and ("Menu item", id) arguments.
+  - Order of the checks: the four checks stay in one method, in the same order.
+    The restaurant lookup still happens after them, so
+    inputChecksRunBeforeAnyRepositoryLookup still passes.
+  - Order of side effects: computeFare → save → recordFare → record is
+    unchanged, which pricesThenSavesThenRecordsFareThenEmitsPlacedEvent checks.
+  - Null edge cases: a null map or null user still throws an NPE at the same
+    point, because the command does no work when it is built.
+  - Transactions: @Transactional stays on the public method. The private helpers
+    are called on this, so they run inside the same transaction. Don't annotate
+    them, because Spring ignores the annotation on self-calls anyway.
+  - Controller: the record constructor evaluates its arguments left to right, so
+    Long.valueOf(restaurantId) still runs before toItemQuantities(). Any
+    NumberFormatException or NPE still happens before the service is called.
+
+  Design choices
+
+  - User stays out of the command. Every other OrderService method takes (…,
+    User user). The command holds what the customer asked for (from the request
+    body), while user is who is asking (from the JWT). This keeps the two
+    sources apart.
+  - The (Customer) cast stays in placeOrder. validatePlacement could return the
+    cast Customer, but then a method named "validate" would also return a value.
+    Leaving it void keeps it a pure check, and the cast sits right under the
+    check that makes it safe.
+  - Promo code later: add a String promoCode field to PlaceOrderCommand, which
+    touches only toCommand() and the test helper. Then validate it either at the
+    end of validatePlacement (a format check), or as its own step between
+    buildOrder and chargeCard (if it needs a repository or the order total). The
+    interface signature won't change again.
+
+  Alternatives considered
+
+  1. Preserve Whole Object (pass PlaceOrderRequest straight to the service).
+     Rejected: the application layer would depend on ui.dto, which breaks the
+     layering, and restaurantId is a String there.
+  2. Validation in the record's compact constructor. Rejected because it changes
+     behaviour. The checks would run in the controller before the role check,
+     so an operator with no coordinates would get "Delivery coordinates are
+     required". That would fail roleIsCheckedBeforeCoordinatesAndCard.
+  3. Replace Function with Command (a separate PlaceOrderUseCase class with
+     execute(), taking 5 of the 8 dependencies). This is a reasonable next step
+     if placement keeps growing after the promo code. It's too heavy for now and
+     goes beyond fixing the two smells you named.
+  4. A second parameter object, DeliveryDestination(address, lat, lon). This
+     would be a valid Introduce Parameter Object, but it adds a type without
+     removing any smell, and it would need either an Order constructor change or
+     unpacking. Deferred.
+  5. A builder for the command. Not needed: all 6 fields are always given at
+     once, and a record covers that. It's worth reconsidering only if many
+     optional fields arrive.
+  6. Keeping the old 7-parameter overload and having it delegate (the migration
+     form of Change Function Declaration). It isn't needed because there are
+     only 2 callers, and the test brief says only the helper should change.
+  7. Move Function on the card mapping (CardDetails.toPayment(amount)). It's
+     tidy but optional and not part of these smells. It could be its own small
+     refactoring.
+
+  Say the word and I'll apply it in the R2a → R2b → R2c order, running the
+  characterisation tests after each step.
