@@ -21,21 +21,14 @@ public class PricingServiceImpl implements PricingService{
     private final PricingConfig config;
     private final FareCalculator calculator;
 
-    public PricingServiceImpl(BillingRecordRepository billingRecordRepository, PricingConfig config){
-        this.billingRecordRepository = billingRecordRepository;
-        this.config = config;
+    public PricingServiceImpl(BillingRecordRepository billingRecordRepository,
+                          PricingConfig config,
+                          FareCalculator calculator) {
+    this.billingRecordRepository = billingRecordRepository;
+    this.config = config;
+    this.calculator = calculator;
+}
 
-        //Decorator chain assembled from the configuration file
-        this.calculator = new SmallOrderSurchargeDecorator(
-                              new ServiceFeeDecorator(
-                                  new DeliveryFeeDecorator(
-                                      new SubtotalCalculator(),
-                                      config.getDeliveryFee()),
-
-                                  config.getServiceFee()),
-                              config.getSmallOrderThreshold(),
-                              config.getSmallOrderSurcharge());
-    }
 
     @Override
     public Fare computeFare(Order order){

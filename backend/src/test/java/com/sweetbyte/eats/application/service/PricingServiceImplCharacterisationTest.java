@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.PricingConfig;
+import com.sweetbyte.eats.repository.config.PricingConfiguration;
 import com.sweetbyte.eats.repository.persistence.BillingRecordRepository;
 
 class PricingServiceImplCharacterisationTest {
@@ -29,9 +30,9 @@ class PricingServiceImplCharacterisationTest {
     }
 
     // Only this method changes after the refactoring
-    private PricingServiceImpl newService() {
-        return new PricingServiceImpl(repo, config);
-    }
+   private PricingServiceImpl newService() {
+    return new PricingServiceImpl(repo, config, new PricingConfiguration().fareCalculator(config));
+}
 
     private Order orderWithSubtotal(String subtotal) {
         Order order = mock(Order.class);
