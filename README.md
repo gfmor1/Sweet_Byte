@@ -39,11 +39,36 @@ Requires Java 21 and Node 22.
 
 ## Configuration
 
-All config is hardcoded in `application.properties` (class project, no env vars).
+Non-secret config is in `application.properties`. Secrets are never committed: put them in
+`backend/src/main/resources/application-local.properties` (gitignored, loaded automatically):
+
+```properties
+spring.datasource.password=<Supabase DB password>
+supabase.service-role-key=<Supabase service-role key>
+```
+
+The service-role key can also come from the `SUPABASE_SERVICE_ROLE_KEY` environment variable.
+The frontend's address search needs `NEXT_PUBLIC_GEOAPIFY_API_KEY` in `FrontEnd/.env.local` (see `.env.example`).
 
 - DB uses the Supabase **session pooler** host, because the direct host is IPv6-only.
 - `ddl-auto=update` lets Hibernate create the tables on first run. Switch to `validate` once migrations exist.
 - `app.cors.allowed-origins` must match the frontend's URL.
+
+## Demo platform
+
+The course demo platform runs `demo/compose.yaml`: `web` (nginx, public) in front of `frontend`
+(Next.js) and `backend` (Spring Boot), with a local Postgres `db`. Images are published by
+`.github/workflows/publish-demo-images.yml` on every push to `main`. Login still goes through the
+hosted Supabase Auth project. Details: `demo-platform/README.md`.
+
+Demo logins (password `demo123`, created by the seeder when the Supabase service-role key is set):
+
+| Role | Email |
+|---|---|
+| Customer | `customer@sweetbyte.test` |
+| Restaurant owner | `restaurant@sweetbyte.test` (also `owner2` … `owner7@sweetbyte.test`) |
+| Courier | `courier@sweetbyte.test` |
+| Operator | `operator@sweetbyte.test` |
 
 ## Event log
 

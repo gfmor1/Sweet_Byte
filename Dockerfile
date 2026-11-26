@@ -1,9 +1,9 @@
 # SweetByte: one image with the Spring Boot backend (:8080) and the Next.js frontend (:3001).
 #
-# No variables or secrets to pass: class project, everything is hardcoded on purpose
-# (DB password + Supabase keys in backend application.properties, Geoapify key below).
+# DB password and Supabase service-role key: backend/src/main/resources/application-local.properties (gitignored).
+# Geoapify key (browser, address search): --build-arg NEXT_PUBLIC_GEOAPIFY_API_KEY=... (never commit it).
 #
-# Build:  docker build -t sweetbyte .
+# Build:  docker build -t sweetbyte .   (demo platform: see demo/compose.yaml instead)
 # Run:    docker run -p 8080:8080 -p 3001:3001 sweetbyte
 # Open http://localhost:3001
 
@@ -25,10 +25,11 @@ WORKDIR /build
 COPY FrontEnd/package.json FrontEnd/package-lock.json ./
 RUN npm ci
 COPY FrontEnd/ ./
-# NEXT_PUBLIC_* values are written into the browser bundle at build time (hardcoded on purpose).
+# NEXT_PUBLIC_* values are written into the browser bundle at build time.
+ARG NEXT_PUBLIC_GEOAPIFY_API_KEY=
 # The browser calls the backend at this URL, so it must be reachable from the user's machine.
 ENV NEXT_PUBLIC_API_URL=http://localhost:8080 \
-    NEXT_PUBLIC_GEOAPIFY_API_KEY=bb4b70abb0ff4b5193391f285f9e0c3e \
+    NEXT_PUBLIC_GEOAPIFY_API_KEY=$NEXT_PUBLIC_GEOAPIFY_API_KEY \
     NEXT_PUBLIC_USE_MOCKS=false \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build && npm prune --omit=dev

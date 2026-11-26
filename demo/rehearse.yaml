@@ -1,0 +1,13 @@
+# Local rehearsal only (the platform ignores this file). Run from the demo/ folder.
+# Local Docker Compose does not know the platform's ${secret:NAME}, so turn it into a shell variable:
+#
+#   sed 's/\${secret:\([A-Z0-9_]*\)}/${\1:-}/' compose.yaml > compose.local.yaml
+#   read -s SUPABASE_SERVICE_ROLE_KEY && export SUPABASE_SERVICE_ROLE_KEY   # paste, Enter (optional)
+#   docker compose -f compose.local.yaml -f rehearse.yaml up
+#
+# Open http://localhost:8088. Start again from an empty database with:
+#   docker compose -f compose.local.yaml -f rehearse.yaml down -v
+services:
+  web:
+    ports:
+      - "8088:80"

@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient";
 import { trackLoading } from "./loadingTracker";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"; // "" = same origin (/api via nginx)
 
 // Every backend call shows the loading bar while it runs
 export function apiRequest(path, options) {
