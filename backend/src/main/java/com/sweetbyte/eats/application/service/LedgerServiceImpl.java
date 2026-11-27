@@ -4,6 +4,7 @@ import com.sweetbyte.eats.application.enums.LedgerEntryType;
 import com.sweetbyte.eats.application.enums.OrderStatus;
 import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.exceptions.PermissionDeniedException;
+import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.LedgerEntry;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.User;
@@ -57,10 +58,13 @@ public class LedgerServiceImpl implements LedgerService{
     public LedgerEntry recordFinalState(Order order){
         return ledgerEntryRepository.findByOrderIdAndType(order.getOrderId(), LedgerEntryType.CHARGE)
                 .orElseGet(() -> {
-                    BigDecimal fareTotal = order.getStatus() == OrderStatus.DELIVERED
-                            ? pricingService.getFare(order.getOrderId()).getTotal()
-                            : BigDecimal.ZERO;
-                    return ledgerEntryRepository.save(LedgerEntry.charge(order, fareTotal));
+                    boolean delivered = order.getStatus() == OrderStatus.DELIVERED;
+                    Fare fare = delivered ? pricingService.getFare(order.getOrderId()) : null;
+                    BigDecimal fareTotal = delivered ? fare.getTotal() : BigDecimal.ZERO;
+                    // PROMO: a delivered order's entry carries the fare's code and discount; undelivered ones charge 0.
+                    return ledgerEntryRepository.save(LedgerEntry.charge(order, fareTotal,
+                            delivered ? fare.getPromoCode() : null,
+                            delivered ? fare.getDiscount() : null));
 
                 });
     }

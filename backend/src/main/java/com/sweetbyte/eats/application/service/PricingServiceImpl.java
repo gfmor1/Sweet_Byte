@@ -39,9 +39,14 @@ public class PricingServiceImpl implements PricingService{
     // for this order only.
     @Override
     public Fare computeFare(Order order, BigDecimal discount) {
+        return computeFare(order, discount, null);
+    }
+
+    @Override
+    public Fare computeFare(Order order, BigDecimal discount, String promoCode) {
         FareCalculator forThisOrder = (discount == null || discount.signum() == 0)
                 ? calculator
-                : new PromoDiscountDecorator(calculator, discount);
+                : new PromoDiscountDecorator(calculator, discount, promoCode);
         return forThisOrder.calculate(order).toFare();
     }
 
@@ -54,11 +59,17 @@ public class PricingServiceImpl implements PricingService{
     @Override
     @Transactional
     public BillingRecord recordFare(Order order, BigDecimal discount) {
+        return recordFare(order, discount, null);
+    }
+
+    @Override
+    @Transactional
+    public BillingRecord recordFare(Order order, BigDecimal discount, String promoCode) {
         Objects.requireNonNull(order.getOrderId(), "Save the order before recording its fare");
         // if the PAYMENT row already exists, keep the original (the fare never changes)
         return billingRecordRepository.findByOrderIdAndType(order.getOrderId(), BillingRecordType.PAYMENT)
                 .orElseGet(() -> billingRecordRepository.save(
-                        BillingRecord.payment(order.getOrderId(), computeFare(order, discount))));
+                        BillingRecord.payment(order.getOrderId(), computeFare(order, discount, promoCode))));
     }
 
     @Override

@@ -9,10 +9,10 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-public record LedgerEntryResponse(UUID id, LedgerEntryType type, Long orderId, Long customerId, Long restaurantId, Long courierId, OrderStatus finalStatus, Map<OrderStatus, Instant> timestamps, BigDecimal amount, Instant recordedAt, UUID refundOfEntryId, String reason) {
+public record LedgerEntryResponse(UUID id, LedgerEntryType type, Long orderId, Long customerId, Long restaurantId, Long courierId, OrderStatus finalStatus, Map<OrderStatus, Instant> timestamps, BigDecimal amount, Instant recordedAt, UUID refundOfEntryId, String reason, String promoCode, BigDecimal discount) {
 
     public static LedgerEntryResponse from(LedgerEntry entry){
-        return new LedgerEntryResponse(entry.getId(),entry.getType(), entry.getOrderId(), entry.getCustomerId(), entry.getRestaurantId(), entry.getCourierId(), entry.getFinalStatus(), entry.getTimestamps(), entry.getAmount(), entry.getRecordedAt(), entry.getRefundOfEntryId(), entry.getReason());
+        return new LedgerEntryResponse(entry.getId(),entry.getType(), entry.getOrderId(), entry.getCustomerId(), entry.getRestaurantId(), entry.getCourierId(), entry.getFinalStatus(), entry.getTimestamps(), entry.getAmount(), entry.getRecordedAt(), entry.getRefundOfEntryId(), entry.getReason(), entry.getPromoCode(), entry.getDiscount());
     }
 
 }

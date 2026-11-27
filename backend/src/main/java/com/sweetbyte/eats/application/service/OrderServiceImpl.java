@@ -59,8 +59,9 @@ public class OrderServiceImpl implements OrderService {
         validatePlacement(command, user);                        // input checks, before any DB access
         Order order = buildOrder(command, (Customer) user);      // safe cast: role checked above
         BigDecimal discount = resolveDiscount(command.promoCode(), order.getSubtotal());
-        chargeCard(order, command.card(), discount);
-        return saveAndRecord(order, user, discount);
+        String promoCode = usedCode(command.promoCode(), discount);
+        chargeCard(order, command.card(), discount, promoCode);
+        return saveAndRecord(order, user, discount, promoCode);
     }
 
     // The order of the checks is part of the contract (which message wins): items -> role -> coordinates -> card.
@@ -93,17 +94,24 @@ public class OrderServiceImpl implements OrderService {
                 : promoService.validate(promoCode, subtotal);
     }
 
+    // The code as the ledger shows it (trimmed, upper case), or null when no discount was applied.
+    private String usedCode(String promoCode, BigDecimal discount) {
+        return (promoCode == null || promoCode.isBlank() || discount.signum() == 0)
+                ? null
+                : promoCode.trim().toUpperCase();
+    }
+
     // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
-    private void chargeCard(Order order, CardDetails card, BigDecimal discount) {
-        Fare fare = pricingService.computeFare(order, discount);
+    private void chargeCard(Order order, CardDetails card, BigDecimal discount, String promoCode) {
+        Fare fare = pricingService.computeFare(order, discount, promoCode);
         order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
                 card.expMonth(), card.expYear(), fare.getTotal()));
     }
 
     // The same discount reaches the charge and the ledger, so they can never disagree.
-    private Order saveAndRecord(Order order, User user, BigDecimal discount) {
+    private Order saveAndRecord(Order order, User user, BigDecimal discount, String promoCode) {
         Order saved = orderRepository.save(order);
-        pricingService.recordFare(saved, discount);    // new BillingRecord for this order (same transaction)
+        pricingService.recordFare(saved, discount, promoCode);    // new BillingRecord for this order (same transaction)
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
         return saved;
     }
