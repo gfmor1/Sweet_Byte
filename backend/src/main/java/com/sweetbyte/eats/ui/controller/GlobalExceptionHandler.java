@@ -50,6 +50,12 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, e.getMessage());
     }
 
+    // promo code refused (unknown, expired, below minimum): the message is shown to the customer as-is
+    @ExceptionHandler(PromoRefusedException.class)
+    public ResponseEntity<Map<String, Object>> promoRefused(RuntimeException e) {
+        return error(HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
+    }
+
     @ExceptionHandler(UnsupportedOperationException.class)
     public ResponseEntity<Map<String, Object>> notImplemented(RuntimeException e) {
         return error(HttpStatus.NOT_IMPLEMENTED, e.getMessage());

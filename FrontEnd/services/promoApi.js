@@ -1,12 +1,12 @@
-import { validateMockPromo } from "./mocks/mockPromos";
+import { apiRequest } from "./apiClient";
 
-// Checks a promo code against the cart subtotal. Resolves { code, discount }; rejects with an
-// Error whose message is the refusal text shown to the customer (each refusal has its own text).
-//
-// TODO(promo-backend): UI-only for now, always uses the mock rules. Once the backend defines its
-// contract, call it here (see docs/promo-frontend-todo.md), e.g.
-//   return apiRequest("/api/promo/validate", { method: "POST", body: { code, subtotal } });
-// and delete services/mocks/mockPromos.js.
+// Checks a promo code against the cart subtotal (POST /api/promo/validate).
+// Resolves { code, discount }; rejects with an Error whose message is the server's refusal text
+// (unknown, expired or below the minimum order, each with its own text).
 export async function validatePromo(code, subtotal) {
-  return validateMockPromo(code, subtotal);
+  if (!code?.trim()) throw new Error("Enter a promo code.");
+  return apiRequest("/api/promo/validate", {
+    method: "POST",
+    body: { code: code.trim(), subtotal },
+  });
 }

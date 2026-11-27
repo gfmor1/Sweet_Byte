@@ -77,7 +77,7 @@ export async function placeOrder(
         quantity: item.quantity
       })),
 
-      // TODO(promo-backend): assumed field name; the backend ignores/validates it once defined.
+      // The backend re-validates the code at placement (R-PROMO-01).
       ...(promoCode ? { promoCode } : {})
     }
   });

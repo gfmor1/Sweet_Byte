@@ -26,22 +26,45 @@ public class Fare {
     @Column(nullable = false, updatable = false, precision = 10, scale = 2)
     private BigDecimal smallOrderSurcharge;
 
+    @Column(nullable = false, updatable = false, precision = 10, scale = 2)
+    private BigDecimal discount;
+
+    // The promo code behind the discount; null when none was used.
+    @Column(updatable = false, length = 40)
+    private String promoCode;
+
     // Always subtotal + fees + surcharge; stored so the ledger/history can read it directly.
     @Column(nullable = false, updatable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
     // Required by JPA. Not for our code.
-    protected Fare() { }
+    protected Fare() {
+    }
 
     public Fare(BigDecimal subtotal, BigDecimal deliveryFee,
                 BigDecimal serviceFee, BigDecimal smallOrderSurcharge) {
+        this(subtotal, deliveryFee, serviceFee, smallOrderSurcharge, BigDecimal.ZERO);
+    }
+
+    public Fare(BigDecimal subtotal, BigDecimal deliveryFee,
+                BigDecimal serviceFee, BigDecimal smallOrderSurcharge, BigDecimal discount) {
+        this(subtotal, deliveryFee, serviceFee, smallOrderSurcharge, discount, null);
+    }
+
+    public Fare(BigDecimal subtotal, BigDecimal deliveryFee,
+                BigDecimal serviceFee, BigDecimal smallOrderSurcharge,
+                BigDecimal discount, String promoCode) {
         this.subtotal = money(subtotal, "subtotal");
         this.deliveryFee = money(deliveryFee, "deliveryFee");
         this.serviceFee = money(serviceFee, "serviceFee");
         this.smallOrderSurcharge = money(smallOrderSurcharge, "smallOrderSurcharge");
-        this.total = this.subtotal.add(this.deliveryFee)
+        BigDecimal beforeDiscount = this.subtotal.add(this.deliveryFee)
                 .add(this.serviceFee)
                 .add(this.smallOrderSurcharge);
+        // The discount never exceeds what is owed, so total >= 0 and the shown discount is the real one.
+        this.discount = money(discount, "discount").min(beforeDiscount);
+        this.promoCode = (promoCode == null || promoCode.isBlank()) ? null : promoCode.trim();
+        this.total = beforeDiscount.subtract(this.discount);
     }
 
     private static BigDecimal money(BigDecimal value, String name) {
@@ -52,11 +75,33 @@ public class Fare {
         return value.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal getSubtotal() { return subtotal; }
-    public BigDecimal getDeliveryFee() { return deliveryFee; }
-    public BigDecimal getServiceFee() { return serviceFee; }
-    public BigDecimal getSmallOrderSurcharge() { return smallOrderSurcharge; }
-    public BigDecimal getTotal() { return total; }
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public BigDecimal getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public BigDecimal getServiceFee() {
+        return serviceFee;
+    }
+
+    public BigDecimal getSmallOrderSurcharge() {
+        return smallOrderSurcharge;
+    }
+
+    public BigDecimal getDiscount() {
+        return discount;
+    }
+
+    public String getPromoCode() {
+        return promoCode;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
 
     @Override
     public boolean equals(Object o) {

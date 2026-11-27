@@ -36,6 +36,11 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sweetbyte
       SPRING_DATASOURCE_USERNAME: sweetbyte
       SPRING_DATASOURCE_PASSWORD: demo-password
+      # Testing operator, created (or its password reset) at every start by SeedDataLoader.
+      # Hardcoded on purpose for testing: anyone who reads this file can log in as operator.
+      APP_SEED_OPERATOR_EMAIL: admin@sweetbyte.test
+      APP_SEED_OPERATOR_PASSWORD: operator123
+      APP_SEED_OPERATOR_NAME: Test Operator
       # Login tokens are signed with a random key chosen at each start (a restart logs everyone out).
       # To keep logins across restarts, save a JWT_SECRET (32+ characters) on the platform's
       # Secrets page and add:  JWT_SECRET: ${secret:JWT_SECRET}

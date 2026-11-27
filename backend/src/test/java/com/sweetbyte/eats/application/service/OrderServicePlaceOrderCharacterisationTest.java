@@ -86,6 +86,7 @@ class OrderServicePlaceOrderCharacterisationTest {
     private DispatchService dispatchService;
     private PricingService pricingService;
     private CreditRefundService creditRefundService;
+    private PromoService promoService;
     private OrderServiceImpl service;          // the real class under test
 
     // ---- Real domain objects used in the orders ----
@@ -107,8 +108,9 @@ class OrderServicePlaceOrderCharacterisationTest {
         dispatchService = mock(DispatchService.class);
         pricingService = mock(PricingService.class);
         creditRefundService = mock(CreditRefundService.class);
+        promoService = mock(PromoService.class);
         service = new OrderServiceImpl(orderRepository, restaurantRepository, menuItemRepository,
-                eventService, permissionResolver, dispatchService, pricingService, creditRefundService);
+                eventService, permissionResolver, dispatchService, pricingService, creditRefundService, promoService);
 
         // 2. A customer, an OPEN restaurant (restaurants start CLOSED) and two available items.
         customer = new Customer(UUID.randomUUID(), "Ada", "ada@example.com");
@@ -122,7 +124,7 @@ class OrderServicePlaceOrderCharacterisationTest {
         when(restaurantRepository.findById(RESTAURANT_ID)).thenReturn(Optional.of(restaurant));
         when(menuItemRepository.findById(CAKE_ID)).thenReturn(Optional.of(cake));
         when(menuItemRepository.findById(COOKIE_ID)).thenReturn(Optional.of(cookie));
-        when(pricingService.computeFare(any(Order.class))).thenReturn(FARE);
+        when(pricingService.computeFare(any(Order.class), any(BigDecimal.class), any())).thenReturn(FARE);
         // save() returns the same order it receives, like a real repository would.
         when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
     }
@@ -206,9 +208,9 @@ class OrderServicePlaceOrderCharacterisationTest {
         Order order = place(items(CAKE_ID, 1), ADDRESS, LAT, LON, CARD, customer);
 
         InOrder sequence = inOrder(pricingService, orderRepository, eventService);
-        sequence.verify(pricingService).computeFare(order);
+        sequence.verify(pricingService).computeFare(order, BigDecimal.ZERO, null);
         sequence.verify(orderRepository).save(order);
-        sequence.verify(pricingService).recordFare(order);
+        sequence.verify(pricingService).recordFare(order, BigDecimal.ZERO, null);
         // Event: entity "Order", no previous state (null) -> PLACED, by the customer, no note.
         sequence.verify(eventService).record("Order", order.getOrderId(), null, OrderStatus.PLACED, customer, null);
     }

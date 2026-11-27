@@ -13,8 +13,9 @@ export const PRICING_CONFIG = {
 const roundCents = (value) => Math.round(value * 100) / 100;
 
 // Fare breakdown for an items subtotal: subtotal - promo discount + delivery + service (+ surcharge below threshold).
-// TODO(promo-backend): the discount is applied client-side for the preview only; the real total must come
-// from the backend (see docs/promo-frontend-todo.md). The small-order surcharge uses the pre-discount subtotal.
+// Client preview of the server fare (PricingServiceImpl): the discount is capped so the total never goes
+// below the fees, and the small-order surcharge uses the pre-discount subtotal. The placed order's real total
+// comes from the backend.
 export function calculateFare(subtotal, config = PRICING_CONFIG, discount = 0) {
   const appliedDiscount = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
   const smallOrderSurcharge = subtotal < config.smallOrderThreshold ? config.smallOrderSurcharge : 0;

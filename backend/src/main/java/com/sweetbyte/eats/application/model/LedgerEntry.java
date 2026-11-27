@@ -103,13 +103,21 @@ public class LedgerEntry {
     @Column(updatable = false)                          // REFUND only, optional
     private String reason;
 
+    // PROMO: the code and discount of the order's fare; null when no code was used.
+    @Column(updatable = false, length = 40)
+    private String promoCode;
+
+    @Column(updatable = false, precision = 10, scale = 2)
+    private BigDecimal discount;
+
     // Required by JPA. Not for our code.
     protected LedgerEntry() { }
 
     private LedgerEntry(LedgerEntryType type, Long orderId, Long customerId,
                         Long restaurantId, Long courierId, OrderStatus finalStatus,
                         Map<OrderStatus, Instant> timestamps, BigDecimal amount,
-                        LedgerEntry refundOf, String reason) {
+                        LedgerEntry refundOf, String reason,
+                        String promoCode, BigDecimal discount) {
         this.id = UUID.randomUUID();
         this.type = Objects.requireNonNull(type, "type");
         this.orderId = Objects.requireNonNull(orderId, "orderId");
@@ -122,6 +130,8 @@ public class LedgerEntry {
         this.recordedAt = Instant.now();
         this.refundOf = refundOf;
         this.reason = (reason == null || reason.isBlank()) ? null : reason.trim();
+        this.promoCode = promoCode;
+        this.discount = (promoCode == null || discount == null) ? null : discount.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -131,6 +141,10 @@ public class LedgerEntry {
      * that was never delivered; the entry still records its final state and timestamps.
      */
     public static LedgerEntry charge(Order order, BigDecimal fareTotal) {
+        return charge(order, fareTotal, null, null);
+    }
+
+    public static LedgerEntry charge(Order order, BigDecimal fareTotal, String promoCode, BigDecimal discount) {
         Objects.requireNonNull(order, "order");
         Objects.requireNonNull(fareTotal, "fareTotal");
         if (!CHARGEABLE.contains(order.getStatus())) {
@@ -144,7 +158,7 @@ public class LedgerEntry {
         return new LedgerEntry(LedgerEntryType.CHARGE, order.getOrderId(),
                 order.getCustomer().getUserId(), order.getRestaurant().getRestaurantId(),
                 courierIdOf(order), order.getStatus(), order.getTimestamps(),
-                amount, null, null);
+                amount, null, null, promoCode, discount);
     }
 
     /**
@@ -171,7 +185,8 @@ public class LedgerEntry {
         }
         return new LedgerEntry(LedgerEntryType.REFUND, charge.orderId, charge.customerId,
                 charge.restaurantId, charge.courierId, OrderStatus.REFUNDED,
-                order.getTimestamps(), charge.amount.negate(), charge, reason);
+                order.getTimestamps(), charge.amount.negate(), charge, reason,
+                charge.promoCode, charge.discount);
     }
 
     private static Long courierIdOf(Order order) {
@@ -192,6 +207,8 @@ public class LedgerEntry {
     public LedgerEntry getRefundOf() { return refundOf; }
     public UUID getRefundOfEntryId() { return refundOf == null ? null : refundOf.getId(); }
     public String getReason() { return reason; }
+    public String getPromoCode() { return promoCode; }
+    public BigDecimal getDiscount() { return discount; }
 
     // ---- identity ----
     @Override

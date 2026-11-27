@@ -1,4 +1,5 @@
 package com.sweetbyte.eats.application.service;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +31,7 @@ public class OrderServiceImpl implements OrderService {
     private final DispatchService dispatchService; 
     private final PricingService pricingService;
     private final CreditRefundService creditRefundService;
+    private final PromoService promoService;
 
     public OrderServiceImpl(OrderRepository orderRepository, 
         RestaurantRepository restaurantRepository, 
@@ -38,7 +40,8 @@ public class OrderServiceImpl implements OrderService {
         OrderPermissionResolver permissionResolver,
         DispatchService dispatchService,
         PricingService pricingService,
-        CreditRefundService creditRefundService) {
+        CreditRefundService creditRefundService,
+        PromoService promoService) {
         this.pricingService = pricingService;
         this.creditRefundService = creditRefundService;
         this.eventService = eventService;
@@ -47,6 +50,7 @@ public class OrderServiceImpl implements OrderService {
         this.menuItemRepository = menuItemRepository;
         this.permissionResolver = permissionResolver;
         this.dispatchService = dispatchService;
+        this.promoService = promoService;
     }
 
     @Override
@@ -54,8 +58,10 @@ public class OrderServiceImpl implements OrderService {
     public Order placeOrder(PlaceOrderCommand command, User user) {
         validatePlacement(command, user);                        // input checks, before any DB access
         Order order = buildOrder(command, (Customer) user);      // safe cast: role checked above
-        chargeCard(order, command.card());
-        return saveAndRecord(order, user);
+        BigDecimal discount = resolveDiscount(command.promoCode(), order.getSubtotal());
+        String promoCode = usedCode(command.promoCode(), discount);
+        chargeCard(order, command.card(), discount, promoCode);
+        return saveAndRecord(order, user, discount, promoCode);
     }
 
     // The order of the checks is part of the contract (which message wins): items -> role -> coordinates -> card.
@@ -80,32 +86,35 @@ public class OrderServiceImpl implements OrderService {
         return order;
     }
 
+    // R-PROMO-01: at most one code, validated at placement time, once the subtotal is known.
+    // No code means no discount; an invalid one refuses the placement before the card is charged.
+    private BigDecimal resolveDiscount(String promoCode, BigDecimal subtotal) {
+        return (promoCode == null || promoCode.isBlank())
+                ? BigDecimal.ZERO
+                : promoService.validate(promoCode, subtotal);
+    }
+
+    // The code as the ledger shows it (trimmed, upper case), or null when no discount was applied.
+    private String usedCode(String promoCode, BigDecimal discount) {
+        return (promoCode == null || promoCode.isBlank() || discount.signum() == 0)
+                ? null
+                : promoCode.trim().toUpperCase();
+    }
+
     // Mock charge: the customer pays the fare total, computed by the same pricing chain as billing.
-    private void chargeCard(Order order, CardDetails card) {
-        Fare fare = pricingService.computeFare(order);
+    private void chargeCard(Order order, CardDetails card, BigDecimal discount, String promoCode) {
+        Fare fare = pricingService.computeFare(order, discount, promoCode);
         order.pay(Payment.card(card.brand(), card.last4(), card.holder(),
                 card.expMonth(), card.expYear(), fare.getTotal()));
     }
 
-    private Order saveAndRecord(Order order, User user) {
+    // The same discount reaches the charge and the ledger, so they can never disagree.
+    private Order saveAndRecord(Order order, User user, BigDecimal discount, String promoCode) {
         Order saved = orderRepository.save(order);
-        pricingService.recordFare(saved);    // new BillingRecord for this order (same transaction)
+        pricingService.recordFare(saved, discount, promoCode);    // new BillingRecord for this order (same transaction)
         eventService.record("Order", saved.getOrderId(), null, saved.getStatus(), user, null);
         return saved;
     }
-
-    // @Override
-    // @Transactional
-    // public Order createOrder(Order order, User user) {
-    //     Objects.requireNonNull(order, "Order cannot be null");
-    //     Objects.requireNonNull(user, "User cannot be null");
-
-    //     if (order.getCustomer() == null || !order.getCustomer().getUserId().equals(user.getUserId()))
-    //         throw new IllegalArgumentException("Order must belong to the user");
-    //     if (order.getOrderId() != null)
-    //         throw new IllegalArgumentException("This order already exists");
-    //     return orderRepository.save(order);
-    // }
 
     @Override
     @Transactional
@@ -178,8 +187,6 @@ public class OrderServiceImpl implements OrderService {
         eventService.record("Order", order.getOrderId(), from, order.getStatus(), user, null);
         creditRefundService.refund(order, "Order cancelled", user);    // Automatic Credit Refund
     }
-
-
 
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)

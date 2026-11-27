@@ -51,7 +51,8 @@ public class OrderController {
                 orderRequest.latitude(),
                 orderRequest.longitude(),
                 card == null ? null
-                        : new CardDetails(card.brand(), card.last4(), card.holder(), card.expMonth(), card.expYear()));
+                        : new CardDetails(card.brand(), card.last4(), card.holder(), card.expMonth(), card.expYear()),
+                orderRequest.promoCode());
         Order order = orderService.placeOrder(command, user);
         return OrderResponse.from(order);
     }

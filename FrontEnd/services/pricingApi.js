@@ -12,7 +12,6 @@ export function toLedgerEntry(entry) {
     finalState: entry.finalStatus,
     recordedAt: entry.recordedAt,
     amount: entry.amount,
-    // TODO(promo-backend): field names are assumed; align with LedgerEntryResponse.
     promoCode: entry.promoCode ?? null,
     discount: entry.discount ?? null,
   };
@@ -27,9 +26,8 @@ export async function getOrderSummary(orderId) {
     status: summary.status,
     deliveredAt: summary.timestamps?.DELIVERED,
     fare: summary.fare,
-    // TODO(promo-backend): assumed OrderSummaryResponse fields.
-    promoCode: summary.promoCode ?? summary.fare?.promoCode ?? null,
-    discount: summary.discount ?? summary.fare?.discount ?? null,
+    promoCode: summary.fare?.promoCode ?? null,
+    discount: summary.fare?.discount ?? null,
   };
 }
 
