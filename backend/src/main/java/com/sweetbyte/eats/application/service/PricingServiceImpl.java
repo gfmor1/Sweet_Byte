@@ -6,12 +6,13 @@ import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.PricingConfig;
 import com.sweetbyte.eats.application.pricing.FareCalculator;
+import com.sweetbyte.eats.application.pricing.PromoDiscountDecorator;
 import com.sweetbyte.eats.repository.persistence.BillingRecordRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sweetbyte.eats.application.model.BillingRecord;
 
-
+import java.math.BigDecimal;
 import java.util.Objects;
 
 @Service
@@ -30,18 +31,34 @@ public class PricingServiceImpl implements PricingService{
     }
 
     @Override
-    public Fare computeFare(Order order){
-        return calculator.calculate(order).toFare();
+    public Fare computeFare(Order order) {
+        return computeFare(order, BigDecimal.ZERO);
+    }
+
+    // PROMO: the shared chain is built once at startup, so the discount wraps it
+    // for this order only.
+    @Override
+    public Fare computeFare(Order order, BigDecimal discount) {
+        FareCalculator forThisOrder = (discount == null || discount.signum() == 0)
+                ? calculator
+                : new PromoDiscountDecorator(calculator, discount);
+        return forThisOrder.calculate(order).toFare();
     }
 
     @Override
     @Transactional
     public BillingRecord recordFare(Order order) {
+        return recordFare(order, BigDecimal.ZERO);
+    }
+
+    @Override
+    @Transactional
+    public BillingRecord recordFare(Order order, BigDecimal discount) {
         Objects.requireNonNull(order.getOrderId(), "Save the order before recording its fare");
-        // idempotent: if the PAYMENT row already exists, keep the original (the fare never changes)
+        // if the PAYMENT row already exists, keep the original (the fare never changes)
         return billingRecordRepository.findByOrderIdAndType(order.getOrderId(), BillingRecordType.PAYMENT)
                 .orElseGet(() -> billingRecordRepository.save(
-                        BillingRecord.payment(order.getOrderId(), computeFare(order))));
+                        BillingRecord.payment(order.getOrderId(), computeFare(order, discount))));
     }
 
     @Override

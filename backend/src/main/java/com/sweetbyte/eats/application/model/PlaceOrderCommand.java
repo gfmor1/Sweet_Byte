@@ -10,4 +10,12 @@ public record PlaceOrderCommand(Long restaurantId,
                                 String deliveryAddress,
                                 Double latitude,
                                 Double longitude,
-                                CardDetails card) { }
+                                CardDetails card,
+                                String promoCode) {
+    // Kept so the characterisation tests and any caller written before PROMO still compile.
+    public PlaceOrderCommand(Long restaurantId, Map<Long, Integer> itemQuantities,
+                             String deliveryAddress, Double latitude, Double longitude,
+                             CardDetails card) {
+        this(restaurantId, itemQuantities, deliveryAddress, latitude, longitude, card, null);
+    }
+}
