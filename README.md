@@ -59,7 +59,7 @@ The frontend's address search needs `NEXT_PUBLIC_GEOAPIFY_API_KEY` in `FrontEnd/
 The course demo platform runs `demo/compose.yaml`: `web` (nginx, public) in front of `frontend`
 (Next.js) and `backend` (Spring Boot), with a local Postgres `db`. Images are published by
 `.github/workflows/publish-demo-images.yml` on every push to `main`. Login still goes through the
-hosted Supabase Auth project. Details: `demo-platform/README.md`.
+hosted Supabase Auth project. Details: `docs/demo-platform/README.md`.
 
 Demo logins (password `demo123`, created by the seeder when the Supabase service-role key is set):
 
