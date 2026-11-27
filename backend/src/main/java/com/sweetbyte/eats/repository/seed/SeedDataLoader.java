@@ -3,11 +3,13 @@ package com.sweetbyte.eats.repository.seed;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sweetbyte.eats.application.enums.CourierStatus;
+import com.sweetbyte.eats.application.enums.Role;
 import com.sweetbyte.eats.application.model.Courier;
 import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.MenuItem;
@@ -51,9 +54,21 @@ public class SeedDataLoader implements ApplicationRunner {
     @PersistenceContext
     private EntityManager entityManager;
 
+    // Optional extra operator from config (env APP_SEED_OPERATOR_EMAIL / _PASSWORD / _NAME, see demo/compose.yaml).
+    // Blank email or password = no extra operator.
+    private final String extraOperatorEmail;
+    private final String extraOperatorPassword;
+    private final String extraOperatorName;
+
     public SeedDataLoader(ObjectMapper objectMapper, UserRepository userRepository,
                           RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
-                          PasswordEncoder passwordEncoder, CourierRepository courierRepository) {
+                          PasswordEncoder passwordEncoder, CourierRepository courierRepository,
+                          @Value("${app.seed.operator.email:}") String extraOperatorEmail,
+                          @Value("${app.seed.operator.password:}") String extraOperatorPassword,
+                          @Value("${app.seed.operator.name:Test Operator}") String extraOperatorName) {
+        this.extraOperatorEmail = extraOperatorEmail.trim().toLowerCase(Locale.ROOT);
+        this.extraOperatorPassword = extraOperatorPassword;
+        this.extraOperatorName = extraOperatorName.isBlank() ? "Test Operator" : extraOperatorName;
         this.passwordEncoder = passwordEncoder;
         this.courierRepository = courierRepository;
         this.objectMapper = objectMapper;
@@ -143,7 +158,26 @@ public class SeedDataLoader implements ApplicationRunner {
             created++;
         }
 
+        ensureExtraOperator();
+
         log.info("Seed data loaded from {}: {} new records", SEED_FILE, created);
+    }
+
+    // Creates the configured operator, or resets its password to the configured one,
+    // so the account always works after a deploy (even with an existing database volume).
+    private void ensureExtraOperator() {
+        if (extraOperatorEmail.isBlank() || extraOperatorPassword.isBlank()) return;
+        User existing = userRepository.findByEmailIgnoreCase(extraOperatorEmail).orElse(null);
+        if (existing == null) {
+            userRepository.save(withPassword(new Operator(UUID.randomUUID(), extraOperatorName, extraOperatorEmail),
+                    extraOperatorPassword));
+            log.info("Configured operator {} created", extraOperatorEmail);
+        } else if (existing.hasRole(Role.OPERATOR)) {
+            withPassword(existing, extraOperatorPassword); // managed entity: saved at commit
+        } else {
+            log.warn("app.seed.operator.email {} belongs to a {} account: operator not created",
+                    extraOperatorEmail, existing.getRole());
+        }
     }
 
     private int seedRestaurant(SeedData.RestaurantSeed r) {
