@@ -5,7 +5,7 @@ import com.sweetbyte.eats.application.exceptions.NotFoundException;
 import com.sweetbyte.eats.application.model.Fare;
 import com.sweetbyte.eats.application.model.Order;
 import com.sweetbyte.eats.application.model.PricingConfig;
-import com.sweetbyte.eats.application.pricing.*;
+import com.sweetbyte.eats.application.pricing.FareCalculator;
 import com.sweetbyte.eats.repository.persistence.BillingRecordRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,20 +21,12 @@ public class PricingServiceImpl implements PricingService{
     private final PricingConfig config;
     private final FareCalculator calculator;
 
-    public PricingServiceImpl(BillingRecordRepository billingRecordRepository, PricingConfig config){
+    public PricingServiceImpl(BillingRecordRepository billingRecordRepository,
+                              PricingConfig config,
+                              FareCalculator calculator) {
         this.billingRecordRepository = billingRecordRepository;
         this.config = config;
-
-        //Decorator chain assembled from the configuration file
-        this.calculator = new SmallOrderSurchargeDecorator(
-                              new ServiceFeeDecorator(
-                                  new DeliveryFeeDecorator(
-                                      new SubtotalCalculator(),
-                                      config.getDeliveryFee()),
-
-                                  config.getServiceFee()),
-                              config.getSmallOrderThreshold(),
-                              config.getSmallOrderSurcharge());
+        this.calculator = calculator;
     }
 
     @Override
