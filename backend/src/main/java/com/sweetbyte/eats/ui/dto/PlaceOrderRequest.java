@@ -12,7 +12,8 @@ public record PlaceOrderRequest(String restaurantId,
                                 String deliveryAddress,
                                 Double latitude,
                                 Double longitude,
-                                Card payment) {
+                                Card payment,
+                                String promoCode) {
     public record Line(Long menuItemId, Integer quantity) {}
 
     public record Card(String brand, String last4, String holder, Integer expMonth, Integer expYear) {}
