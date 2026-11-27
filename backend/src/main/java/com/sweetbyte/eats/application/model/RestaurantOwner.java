@@ -26,8 +26,8 @@ public class RestaurantOwner extends User {
     protected RestaurantOwner() { }
 
     // An owner always registers together with their restaurant.
-    public RestaurantOwner(UUID supabaseUid, String name, String email, Restaurant restaurant) {
-        super(supabaseUid, name, email, Role.RESTAURANT_OWNER);
+    public RestaurantOwner(UUID authUid, String name, String email, Restaurant restaurant) {
+        super(authUid, name, email, Role.RESTAURANT_OWNER);
         this.restaurant = Objects.requireNonNull(restaurant, "restaurant is required");
     }
 

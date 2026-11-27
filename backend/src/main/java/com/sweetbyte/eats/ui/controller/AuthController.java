@@ -12,51 +12,55 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.application.service.AuthService;
-import com.sweetbyte.eats.ui.dto.CourierMeResponse;
+import com.sweetbyte.eats.ui.dto.AuthResponse;
 import com.sweetbyte.eats.ui.dto.CourierRegisterRequest;
-import com.sweetbyte.eats.ui.dto.CustomerMeResponse;
 import com.sweetbyte.eats.ui.dto.CustomerRegisterRequest;
+import com.sweetbyte.eats.ui.dto.LoginRequest;
 import com.sweetbyte.eats.ui.dto.MeResponse;
-import com.sweetbyte.eats.ui.dto.RestaurantOwnerMeResponse;
 import com.sweetbyte.eats.ui.dto.RestaurantOwnerRegisterRequest;
+import com.sweetbyte.eats.ui.security.TokenService;
 
-//register (one endpoint per role), plus “who am I”
-//all need a verified Supabase JWT (see SecurityConfig)
+//login, register (one endpoint per role), plus "who am I"
+//login and register are public and return a JWT; /me needs that JWT (see SecurityConfig)
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService authService;
+    private final TokenService tokenService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, TokenService tokenService) {
         this.authService = authService;
+        this.tokenService = tokenService;
     }
 
-    // POST /api/auth/register/customer  (after supabase.auth.signUp)
+    // POST /api/auth/login  (wrong email or password = 401)
+    @PostMapping("/login")
+    public AuthResponse login(@RequestBody LoginRequest body) {
+        return withToken(authService.login(body.email(), body.password()));
+    }
+
+    // POST /api/auth/register/customer
     @PostMapping("/register/customer")
     @ResponseStatus(HttpStatus.CREATED)
-    public CustomerMeResponse registerCustomer(@AuthenticationPrincipal Jwt jwt,
-                                               @RequestBody CustomerRegisterRequest body) {
-        return CustomerMeResponse.from(authService.registerCustomer(
-                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name()));
+    public AuthResponse registerCustomer(@RequestBody CustomerRegisterRequest body) {
+        return withToken(authService.registerCustomer(body.email(), body.password(), body.name()));
     }
 
-    // POST /api/auth/register/restaurant-owner  (after supabase.auth.signUp)
+    // POST /api/auth/register/restaurant-owner
     @PostMapping("/register/restaurant-owner")
     @ResponseStatus(HttpStatus.CREATED)
-    public RestaurantOwnerMeResponse registerRestaurantOwner(@AuthenticationPrincipal Jwt jwt,
-                                                             @RequestBody RestaurantOwnerRegisterRequest body) {
-        return RestaurantOwnerMeResponse.from(authService.registerRestaurantOwner(
-                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name(), body.restaurantName()));
+    public AuthResponse registerRestaurantOwner(@RequestBody RestaurantOwnerRegisterRequest body) {
+        return withToken(authService.registerRestaurantOwner(
+                body.email(), body.password(), body.name(), body.restaurantName()));
     }
 
-    // POST /api/auth/register/courier  (after supabase.auth.signUp)
+    // POST /api/auth/register/courier
     @PostMapping("/register/courier")
     @ResponseStatus(HttpStatus.CREATED)
-    public CourierMeResponse registerCourier(@AuthenticationPrincipal Jwt jwt,
-                                             @RequestBody CourierRegisterRequest body) {
-        return CourierMeResponse.from(authService.registerCourier(
-                supabaseUid(jwt), jwt.getClaimAsString("email"), body.name()));
+    public AuthResponse registerCourier(@RequestBody CourierRegisterRequest body) {
+        return withToken(authService.registerCourier(body.email(), body.password(), body.name()));
     }
 
     // Operators are staff: seeded only, no register endpoint
@@ -64,10 +68,10 @@ public class AuthController {
     // GET /api/auth/me  (after login: shape depends on the role, see MeResponse)
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal Jwt jwt) {
-        return MeResponse.from(authService.currentUser(supabaseUid(jwt)));
+        return MeResponse.from(authService.currentUser(UUID.fromString(jwt.getSubject())));
     }
 
-    private static UUID supabaseUid(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    private AuthResponse withToken(User user) {
+        return new AuthResponse(tokenService.issue(user), MeResponse.from(user));
     }
 }

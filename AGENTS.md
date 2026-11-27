@@ -29,7 +29,7 @@ SweetByte is a SOEN 343 (Concordia) academic project: an online dessert ordering
 - Frontend: Next.js (JavaScript or TypeScript)
 - Backend: Java with Spring Boot
 - Database: PostgreSQL
-- Auth: TBD (Firebase removed; to be decided)
+- Auth: Spring Security, backend-issued JWT (HS256) + BCrypt passwords; no external provider
 
 ## Layout
 

@@ -7,18 +7,22 @@ import com.sweetbyte.eats.application.model.Customer;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
 import com.sweetbyte.eats.application.model.User;
 
-// Resolves who is acting on a request, and creates accounts (one method per role).
-// The JWT is already verified by Spring Security; its "sub" is the Supabase account id
-// and its email is used as the account email.
+// Accounts and login, handled by this backend (no external auth provider).
+// Register/login return the User; the UI layer turns it into a signed JWT (TokenService).
+// On later requests Spring Security verifies that JWT, and its "sub" (the user's authUid)
+// is resolved back to the User with currentUser.
 public interface AuthService {
-    User currentUser(UUID supabaseUid);
+    User currentUser(UUID authUid);
 
-    Customer registerCustomer(UUID supabaseUid, String email, String name);
+    // Checks email + password; throws BadCredentialsException (401) when they do not match
+    User login(String email, String password);
+
+    Customer registerCustomer(String email, String password, String name);
 
     // The owner registers together with a new restaurant
-    RestaurantOwner registerRestaurantOwner(UUID supabaseUid, String email, String name, String restaurantName);
+    RestaurantOwner registerRestaurantOwner(String email, String password, String name, String restaurantName);
 
-    Courier registerCourier(UUID supabaseUid, String email, String name);
+    Courier registerCourier(String email, String password, String name);
 
     // Operators are staff: seeded only, never self-registered
 }

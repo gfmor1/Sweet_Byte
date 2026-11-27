@@ -8,9 +8,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 
-// Verifies Supabase JWTs (Authorization: Bearer <token>) on every request.
-// Signature is checked against Supabase's public keys (JWKS), plus expiry, issuer and audience;
-// see spring.security.oauth2.resourceserver.jwt.* in application.properties.
+// Verifies the JWTs this backend issues (Authorization: Bearer <token>) on every request.
+// Signature, expiry and issuer are checked by the JwtDecoder in JwtConfig.
 @Configuration
 public class SecurityConfig {
 
@@ -22,6 +21,8 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()   // CORS preflight
+                // login and sign-up hand out the token, so they cannot require one
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register/*").permitAll()
                 // the preparation queue is restaurant-internal (owner / operator only)
                 .requestMatchers(HttpMethod.GET, "/api/restaurants/*/queue", "/api/restaurants/*/queue/size").authenticated()
                 // public browsing: restaurants, menus, enum lists
