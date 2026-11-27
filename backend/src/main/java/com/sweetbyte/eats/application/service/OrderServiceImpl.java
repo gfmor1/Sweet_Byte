@@ -20,7 +20,7 @@ import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.OrderRepository;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.application.permission.OrderPermissionResolver;
-@Service
+@Service 
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
@@ -28,19 +28,20 @@ public class OrderServiceImpl implements OrderService {
     private final MenuItemRepository menuItemRepository;
     private final EventService eventService;
     private final OrderPermissionResolver permissionResolver;
-    private final DispatchService dispatchService;
+    private final DispatchService dispatchService; 
     private final PricingService pricingService;
     private final CreditRefundService creditRefundService;
     private final PromoService promoService;
 
-    public OrderServiceImpl(OrderRepository orderRepository,
-                            RestaurantRepository restaurantRepository,
-                            MenuItemRepository menuItemRepository,
-                            EventService eventService,
-                            OrderPermissionResolver permissionResolver,
-                            DispatchService dispatchService,
-                            PricingService pricingService,
-                            CreditRefundService creditRefundService) {
+    public OrderServiceImpl(OrderRepository orderRepository, 
+        RestaurantRepository restaurantRepository, 
+        MenuItemRepository menuItemRepository,
+        EventService eventService,
+        OrderPermissionResolver permissionResolver,
+        DispatchService dispatchService,
+        PricingService pricingService,
+        CreditRefundService creditRefundService,
+        PromoService promoService) {
         this.pricingService = pricingService;
         this.creditRefundService = creditRefundService;
         this.eventService = eventService;
@@ -76,7 +77,7 @@ public class OrderServiceImpl implements OrderService {
 
     private Order buildOrder(PlaceOrderCommand command, Customer customer) {
         Restaurant restaurant = restaurantRepository.findById(command.restaurantId())
-                .orElseThrow(() -> new NotFoundException("Restaurant", command.restaurantId()));
+            .orElseThrow(() -> new NotFoundException("Restaurant", command.restaurantId()));
         Order order = new Order(customer, restaurant, command.deliveryAddress(),
                 command.latitude(), command.longitude());
         command.itemQuantities().forEach((menuItemId, quantity) ->
@@ -116,8 +117,8 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public List<Order> getRestaurantOrders(Long restaurantId, User user) {
-        permissionResolver.requireViewRestaurantOrders(user, restaurantId); //refactored to strategy method
-        return orderRepository.findByRestaurantRestaurantId(restaurantId);
+       permissionResolver.requireViewRestaurantOrders(user, restaurantId); //refactored to strategy method
+       return orderRepository.findByRestaurantRestaurantId(restaurantId);
     }
 
     @Override
@@ -181,12 +182,12 @@ public class OrderServiceImpl implements OrderService {
 
     private Order findOrderById(Long orderId) {
         return orderRepository.findById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order", orderId));
+            .orElseThrow(() -> new NotFoundException("Order", orderId));
     }
 
     private MenuItem findMenuItem(Long menuItemId) {
         return menuItemRepository.findById(menuItemId)
-                .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
+            .orElseThrow(() -> new NotFoundException("Menu item", menuItemId));
     }
 
 }
