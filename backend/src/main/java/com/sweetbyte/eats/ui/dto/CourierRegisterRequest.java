@@ -1,6 +1,5 @@
 package com.sweetbyte.eats.ui.dto;
 
-//POST /api/auth/register/courier
-//email and Supabase id are NOT here: they come from the verified JWT, so they can't be faked
-public record CourierRegisterRequest(String name) {
+//POST /api/auth/register/courier (public: creates the account and logs in)
+public record CourierRegisterRequest(String email, String password, String name) {
 }

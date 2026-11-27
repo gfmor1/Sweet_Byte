@@ -15,7 +15,7 @@ public class Customer extends User {
 
     protected Customer() { }
 
-    public Customer(UUID supabaseUid, String name, String email) {
-        super(supabaseUid, name, email, Role.CUSTOMER);
+    public Customer(UUID authUid, String name, String email) {
+        super(authUid, name, email, Role.CUSTOMER);
     }
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +22,11 @@ import com.sweetbyte.eats.application.model.MenuItem;
 import com.sweetbyte.eats.application.model.Operator;
 import com.sweetbyte.eats.application.model.Restaurant;
 import com.sweetbyte.eats.application.model.RestaurantOwner;
+import com.sweetbyte.eats.application.model.User;
 import com.sweetbyte.eats.repository.persistence.CourierRepository;
 import com.sweetbyte.eats.repository.persistence.MenuItemRepository;
 import com.sweetbyte.eats.repository.persistence.RestaurantRepository;
 import com.sweetbyte.eats.repository.persistence.UserRepository;
-import com.sweetbyte.eats.repository.supabase.SupabaseAuthAdminClient;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -44,7 +45,7 @@ public class SeedDataLoader implements ApplicationRunner {
     private final UserRepository userRepository;
     private final RestaurantRepository restaurantRepository;
     private final MenuItemRepository menuItemRepository;
-    private final SupabaseAuthAdminClient supabaseAdmin;
+    private final PasswordEncoder passwordEncoder;
     private final CourierRepository courierRepository;
 
     @PersistenceContext
@@ -52,8 +53,8 @@ public class SeedDataLoader implements ApplicationRunner {
 
     public SeedDataLoader(ObjectMapper objectMapper, UserRepository userRepository,
                           RestaurantRepository restaurantRepository, MenuItemRepository menuItemRepository,
-                          SupabaseAuthAdminClient supabaseAdmin, CourierRepository courierRepository) {
-        this.supabaseAdmin = supabaseAdmin;
+                          PasswordEncoder passwordEncoder, CourierRepository courierRepository) {
+        this.passwordEncoder = passwordEncoder;
         this.courierRepository = courierRepository;
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
@@ -120,41 +121,32 @@ public class SeedDataLoader implements ApplicationRunner {
     }
 
     private void seedMissing(SeedData seed) {
-        // Users need a Supabase Auth account first; without the service-role key only
-        // restaurants and menus are seeded (users are added on a later run that has it).
-        boolean seedUsers = supabaseAdmin.isConfigured();
-        if (!seedUsers) {
-            log.warn("supabase.service-role-key not set: skipping seeded users");
+        int created = 0;
+        for (SeedData.RestaurantSeed r : seed.restaurants()) created += seedRestaurant(r);
+
+        for (SeedData.CustomerSeed c : seed.customers()) {
+            if (existingUser(c.email(), c.password())) continue;
+            userRepository.save(withPassword(new Customer(UUID.randomUUID(), c.name(), c.email()), c.password()));
+            created++;
         }
 
-        int created = 0;
-        for (SeedData.RestaurantSeed r : seed.restaurants()) created += seedRestaurant(r, seedUsers);
+        for (SeedData.CourierSeed c : seed.couriers()) {
+            if (existingUser(c.email(), c.password())) continue;
+            userRepository.save(withPassword(new Courier(UUID.randomUUID(), c.name(), c.email(),
+                    c.latitude(), c.longitude()), c.password()));
+            created++;
+        }
 
-        if (seedUsers) {
-            for (SeedData.CustomerSeed c : seed.customers()) {
-                if (userRepository.existsByEmail(c.email())) continue;
-                userRepository.save(new Customer(authAccount(c.email(), c.password()), c.name(), c.email()));
-                created++;
-            }
-
-            for (SeedData.CourierSeed c : seed.couriers()) {
-                if (userRepository.existsByEmail(c.email())) continue;
-                userRepository.save(new Courier(authAccount(c.email(), c.password()), c.name(), c.email(),
-                        c.latitude(), c.longitude()));
-                created++;
-            }
-
-            for (SeedData.OperatorSeed o : seed.operators()) {
-                if (userRepository.existsByEmail(o.email())) continue;
-                userRepository.save(new Operator(authAccount(o.email(), o.password()), o.name(), o.email()));
-                created++;
-            }
+        for (SeedData.OperatorSeed o : seed.operators()) {
+            if (existingUser(o.email(), o.password())) continue;
+            userRepository.save(withPassword(new Operator(UUID.randomUUID(), o.name(), o.email()), o.password()));
+            created++;
         }
 
         log.info("Seed data loaded from {}: {} new records", SEED_FILE, created);
     }
 
-    private int seedRestaurant(SeedData.RestaurantSeed r, boolean seedUsers) {
+    private int seedRestaurant(SeedData.RestaurantSeed r) {
         int created = 0;
 
         Restaurant restaurant = restaurantRepository.findByName(r.name()).orElse(null);
@@ -166,11 +158,11 @@ public class SeedDataLoader implements ApplicationRunner {
         }
 
         // One owner per restaurant: skip if this email or this restaurant already has one
-        if (seedUsers && r.owner() != null
-                && !userRepository.existsByEmail(r.owner().email())
+        if (r.owner() != null
+                && !existingUser(r.owner().email(), r.owner().password())
                 && !userRepository.existsOwnerForRestaurant(restaurant.getRestaurantId())) {
-            userRepository.save(new RestaurantOwner(authAccount(r.owner().email(), r.owner().password()),
-                    r.owner().name(), r.owner().email(), restaurant));
+            userRepository.save(withPassword(new RestaurantOwner(UUID.randomUUID(),
+                    r.owner().name(), r.owner().email(), restaurant), r.owner().password()));
             created++;
         }
 
@@ -184,8 +176,17 @@ public class SeedDataLoader implements ApplicationRunner {
         return created;
     }
 
-    // Creates (or finds) the user's Supabase Auth account; its id becomes users.supabase_uid
-    private UUID authAccount(String email, String password) {
-        return supabaseAdmin.ensureUser(email, password);
+    private <T extends User> T withPassword(T user, String password) {
+        user.setPasswordHash(passwordEncoder.encode(password));
+        return user;
+    }
+
+    // true if a seeded account with this email exists. Accounts created before local login
+    // (Supabase Auth era) have no password hash: give them the seeded one so they can log in.
+    private boolean existingUser(String email, String password) {
+        return userRepository.findByEmailIgnoreCase(email).map(user -> {
+            if (user.getPasswordHash() == null) withPassword(user, password); // saved at commit (managed entity)
+            return true;
+        }).orElse(false);
     }
 }

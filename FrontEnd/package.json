@@ -12,7 +12,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
     "leaflet": "^1.9.4",
     "next": "^16.4.3",
     "react": "^19.3.0",

@@ -13,7 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByEmail(String email);
 
-    Optional<User> findBySupabaseUid(UUID supabaseUid);
+    Optional<User> findByEmailIgnoreCase(String email);
+
+    Optional<User> findByAuthUid(UUID authUid);
 
     @Query("select count(o) > 0 from RestaurantOwner o where o.restaurant.restaurantId = :restaurantId")
     boolean existsOwnerForRestaurant(@Param("restaurantId") Long restaurantId);

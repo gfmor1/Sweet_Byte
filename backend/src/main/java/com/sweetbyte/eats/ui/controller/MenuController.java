@@ -70,7 +70,7 @@ public class MenuController {
         return MenuItemResponse.from(menuService.markAvailable(restaurantId, itemId, currentUser(jwt)));
     }
 
-    // the verified JWT's sub (Supabase id) -> our User
+    // the verified JWT's sub (the user's authUid) -> our User
     private User currentUser(Jwt jwt) {
         return authService.currentUser(UUID.fromString(jwt.getSubject()));
     }

@@ -1,34 +1,14 @@
-import { apiRequest } from "./apiClient";
-import { supabase } from "./supabaseClient";
-import { trackLoading } from "./loadingTracker";
+import { apiRequest, clearToken, getToken, setToken, SIGNED_OUT_EVENT } from "./apiClient";
 import { useMocks } from "./config";
 
-// Auth = Supabase account (email + password, gives the JWT)
-//      + SweetByte account (our users row: role, restaurant…), created by /api/auth/register/*.
+// Auth is handled by our backend: login/register return { token, user }.
+// The token (a JWT) is kept in localStorage and sent on every call by apiClient.
 // Profiles returned below have the GET /api/auth/me shape: { userId, name, email, role, ... }
 
-// Supabase returns { data, error } instead of throwing
-function throwIfError(error) {
-  if (error) throw new Error(error.message);
-}
-
-// Step 1 of registration: create the Supabase account.
-// The form (role, name, address…) is saved in the Supabase user's metadata, so if
-// "Confirm email" is on, the first login after confirming can finish step 2 by itself.
-// If a previous attempt created the Supabase account but step 2 failed, sign in instead
-// so the user can retry without a "User already registered" dead end.
-// Returns true when logged in right away, false when the email must be confirmed first.
-export async function signUp(email, password, registration) {
-  // Mock couriers have no Supabase account: registerCourier signs them in locally.
-  if (useMocks && registration.role === "COURIER") return true;
-  let { data, error } = await trackLoading(
-    supabase.auth.signUp({ email, password, options: { data: { registration } } })
-  );
-  if (error && /already registered/i.test(error.message)) {
-    ({ data, error } = await trackLoading(supabase.auth.signInWithPassword({ email, password })));
-  }
-  throwIfError(error);
-  return data.session !== null;
+// Login and register responses: keep the token, return the profile
+function startSession({ token, user }) {
+  setToken(token);
+  return user;
 }
 
 // Roles that can self-register, each with its backend register call
@@ -41,35 +21,24 @@ const REGISTER_BY_ROLE = {
 
 export const REGISTERABLE_ROLES = Object.keys(REGISTER_BY_ROLE);
 
-// Step 2 of registration: registration = { role, name, deliveryAddress, restaurantName }
-export function registerForRole(registration) {
-  return REGISTER_BY_ROLE[registration.role](registration);
+// One step: creates the account for registration.role and logs in.
+// registration = { role, name, restaurantName }. Returns the profile.
+export function signUp(email, password, registration) {
+  return REGISTER_BY_ROLE[registration.role]({ ...registration, email, password });
 }
 
-// Logged into Supabase: load the SweetByte profile. A 403 means no SweetByte account yet;
-// if sign-up saved a registration form (email confirmation case), finish registering now.
-async function loadProfile(supabaseUser) {
-  try {
-    return await getMe();
-  } catch (error) {
-    const pending = supabaseUser?.user_metadata?.registration;
-    if (error.status === 403 && pending) return registerForRole(pending);
-    throw error;
-  }
-}
-
-export function registerCustomer({ name }) {
-  return apiRequest("/api/auth/register/customer", {
+export async function registerCustomer({ email, password, name }) {
+  return startSession(await apiRequest("/api/auth/register/customer", {
     method: "POST",
-    body: { name }
-  });
+    body: { email, password, name }
+  }));
 }
 
-export function registerRestaurantOwner({ name, restaurantName }) {
-  return apiRequest("/api/auth/register/restaurant-owner", {
+export async function registerRestaurantOwner({ email, password, name, restaurantName }) {
+  return startSession(await apiRequest("/api/auth/register/restaurant-owner", {
     method: "POST",
-    body: { name, restaurantName }
-  });
+    body: { email, password, name, restaurantName }
+  }));
 }
 
 // Mock mode only (NEXT_PUBLIC_USE_MOCKS=true): the backend cannot describe COURIER/OPERATOR
@@ -80,17 +49,17 @@ const MOCK_ACCOUNTS = {
   "operator@sweetbyte.test": { userId: "mock-operator", name: "Demo Operator", role: "OPERATOR" }
 };
 
-export async function registerCourier({ name }) {
+export async function registerCourier({ email, password, name }) {
   if (useMocks) {
     // Acts as the seeded mock courier for this browser session only; nothing is stored afterwards.
     const profile = { ...MOCK_ACCOUNTS["courier@sweetbyte.test"], name };
     window.sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(profile));
     return profile;
   }
-  return apiRequest("/api/auth/register/courier", {
+  return startSession(await apiRequest("/api/auth/register/courier", {
     method: "POST",
-    body: { name }
-  });
+    body: { email, password, name }
+  }));
 }
 
 function readMockUser() {
@@ -102,12 +71,12 @@ function readMockUser() {
   }
 }
 
-// Role of the local mock session (courier/operator), or null for a real Supabase session
+// Role of the local mock session (courier/operator), or null for a real session
 export function mockSessionRole() {
   return readMockUser()?.role ?? null;
 }
 
-// Returning user: Supabase checks the password, then we load the SweetByte profile
+// Returning user: the backend checks the password and returns the token + profile
 export async function login(email, password) {
   const mockAccount = useMocks ? MOCK_ACCOUNTS[email.trim().toLowerCase()] : null;
   if (mockAccount) {
@@ -116,31 +85,42 @@ export async function login(email, password) {
     window.sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(profile));
     return profile;
   }
-  const { data, error } = await trackLoading(supabase.auth.signInWithPassword({ email, password }));
-  throwIfError(error);
-  return loadProfile(data.user);
+  return startSession(await apiRequest("/api/auth/login", {
+    method: "POST",
+    body: { email, password }
+  }));
 }
 
-// The logged-in user's SweetByte profile (403 = Supabase account without a SweetByte account)
+// The logged-in user's SweetByte profile (403 = the account behind the token no longer exists)
 export function getMe() {
   return apiRequest("/api/auth/me");
 }
 
-// Page load / reload: Supabase keeps the session in the browser; null = not logged in
+// Page load / reload: the token stays in this browser; null = not logged in
 export async function getCurrentUser() {
   const mockUser = readMockUser();
   if (mockUser) return mockUser;
-  const { data } = await supabase.auth.getSession();
-  return data.session ? loadProfile(data.session.user) : null;
+  if (!getToken()) return null;
+  try {
+    return await getMe();
+  } catch (error) {
+    if (error.status === 401) return null; // expired token, already cleared by apiClient
+    throw error;
+  }
 }
 
-// Session ended outside our logout button (other tab, expired refresh token).
+// Session ended outside our logout button: expired token, or logout in another tab.
 // Returns an unsubscribe function.
 export function onSignedOut(callback) {
-  const { data } = supabase.auth.onAuthStateChange((event) => {
-    if (event === "SIGNED_OUT") callback();
-  });
-  return () => data.subscription.unsubscribe();
+  const onStorage = (event) => {
+    if (event.key === "sweetbyte.token" && event.newValue === null) callback();
+  };
+  window.addEventListener(SIGNED_OUT_EVENT, callback);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(SIGNED_OUT_EVENT, callback);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 export async function logout() {
@@ -148,6 +128,6 @@ export async function logout() {
     window.sessionStorage.removeItem(MOCK_SESSION_KEY);
     return;
   }
-  const { error } = await trackLoading(supabase.auth.signOut());
-  throwIfError(error);
+  // JWTs are stateless: logging out = forgetting the token in this browser
+  clearToken();
 }

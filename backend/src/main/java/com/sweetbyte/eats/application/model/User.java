@@ -27,10 +27,15 @@ public abstract class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
-    // The Supabase Auth account id (the "sub" claim of the user's JWT).
-    // Every user is created in Supabase Auth first, seeded users included.
-    @Column(nullable = false, unique = true, updatable = false)
-    private UUID supabaseUid;
+    // Login id: the "sub" claim of the JWT this backend issues (see TokenService).
+    // The column keeps its old name (from the Supabase Auth days) so existing databases still load.
+    @Column(name = "supabase_uid", nullable = false, unique = true, updatable = false)
+    private UUID authUid;
+
+    // BCrypt hash of the password, never the password itself. Null for rows created
+    // before local login existed: those accounts cannot log in until a password is set.
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     @Column(nullable = false)
     private String name;
@@ -49,8 +54,8 @@ public abstract class User {
     protected User() { }
 
     // Called only by subclasses, each passing its own fixed role.
-    protected User(UUID supabaseUid, String name, String email, Role role) {
-        this.supabaseUid = Objects.requireNonNull(supabaseUid, "supabaseUid is required");
+    protected User(UUID authUid, String name, String email, Role role) {
+        this.authUid = Objects.requireNonNull(authUid, "authUid is required");
         this.name = requireText(name, "name");
         this.email = requireText(email, "email");
         this.role = Objects.requireNonNull(role, "role is required");
@@ -58,7 +63,8 @@ public abstract class User {
 
     // ---- getters ----
     public Long getUserId()        { return userId; }
-    public UUID getSupabaseUid()   { return supabaseUid; }
+    public UUID getAuthUid()       { return authUid; }
+    public String getPasswordHash() { return passwordHash; }
     public String getName()        { return name; }
     public String getEmail()       { return email; }
     public Role getRole()          { return role; }
@@ -67,6 +73,11 @@ public abstract class User {
     // ---- behaviour ----
     public boolean hasRole(Role role) {
         return this.role == role;
+    }
+
+    // the caller hashes the password (PasswordEncoder); the plain password never reaches the entity
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = requireText(passwordHash, "passwordHash");
     }
 
     public void rename(String newName) {

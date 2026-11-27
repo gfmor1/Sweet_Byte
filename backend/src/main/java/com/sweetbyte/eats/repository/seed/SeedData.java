@@ -15,7 +15,7 @@ public record SeedData(List<RestaurantSeed> restaurants,
                        List<OperatorSeed> operators) {
 
     // each restaurant comes with its owner (one owner per restaurant)
-    // user passwords are the demo logins created in Supabase Auth (never stored in our DB)
+    // user passwords are the demo logins; only their BCrypt hash is stored (users.password_hash)
     public record RestaurantSeed(String name, RestaurantStatus status, double latitude, double longitude,
                                  UserSeed owner, List<MenuItemSeed> menu) {}
 

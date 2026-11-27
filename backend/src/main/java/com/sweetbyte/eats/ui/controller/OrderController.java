@@ -29,7 +29,7 @@ import com.sweetbyte.eats.ui.dto.UpdateStatusRequest;
 @RestController 
 @RequestMapping ("/api/orders")
 //place, list, view, accept, reject, start preparing, mark ready, cancel
-// acting user = the verified Supabase JWT (sub) mapped to our User by AuthService
+// acting user = the verified JWT (sub) mapped to our User by AuthService
 public class OrderController {
     private final OrderService orderService;
     private final AuthService authService;
