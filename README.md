@@ -44,10 +44,13 @@ Non-secret config is in `application.properties`. Secrets are never committed: p
 
 ```properties
 spring.datasource.password=<Supabase DB password>
-supabase.service-role-key=<Supabase service-role key>
 ```
 
-The service-role key can also come from the `SUPABASE_SERVICE_ROLE_KEY` environment variable.
+Login is handled by the backend: passwords are stored as BCrypt hashes in `users.password_hash`,
+and `/api/auth/login` and `/api/auth/register/*` return a JWT signed with `app.jwt.secret`
+(`JWT_SECRET` env var, 32+ characters). Without it a random key is used at each start, which logs
+everyone out on restart. Accounts created in the old Supabase Auth have no password here: the seeder
+gives seeded accounts their `demo123` password; other old accounts must register again.
 The frontend's address search needs `NEXT_PUBLIC_GEOAPIFY_API_KEY` in `FrontEnd/.env.local` (see `.env.example`).
 
 - DB uses the Supabase **session pooler** host, because the direct host is IPv6-only.
@@ -58,10 +61,10 @@ The frontend's address search needs `NEXT_PUBLIC_GEOAPIFY_API_KEY` in `FrontEnd/
 
 The course demo platform runs `demo/compose.yaml`: `web` (nginx, public) in front of `frontend`
 (Next.js) and `backend` (Spring Boot), with a local Postgres `db`. Images are published by
-`.github/workflows/publish-demo-images.yml` on every push to `main`. Login still goes through the
-hosted Supabase Auth project. Details: `demo-platform/README.md`.
+`.github/workflows/publish-demo-images.yml` on every push to `main`. It needs no external service
+and no secret. Details: `docs/demo-platform/README.md`.
 
-Demo logins (password `demo123`, created by the seeder when the Supabase service-role key is set):
+Demo logins (password `demo123`, created by the seeder at startup):
 
 | Role | Email |
 |---|---|

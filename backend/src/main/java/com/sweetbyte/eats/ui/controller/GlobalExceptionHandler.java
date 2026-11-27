@@ -5,6 +5,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
@@ -25,6 +26,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Map<String, Object>> notFound(RuntimeException e) {
         return error(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    // wrong email or password at login
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> unauthorized(RuntimeException e) {
+        return error(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @ExceptionHandler(PermissionDeniedException.class)

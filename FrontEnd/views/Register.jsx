@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { REGISTERABLE_ROLES, registerForRole, signUp } from "../services/authApi";
+import { REGISTERABLE_ROLES, signUp } from "../services/authApi";
 import { formatEnum } from "../services/enumApi";
 import { StatusMessage, useStatus } from "../components/StatusMessage";
 
@@ -25,15 +25,9 @@ function Register({ onRegisterSuccess }) {
     setSubmitting(true);
     show.clear();
     try {
-      // 1. Supabase account (gives the JWT), 2. SweetByte account for the chosen role
-     const registration = { role, name, restaurantName };
-      const loggedIn = await signUp(email, password, registration);
-      if (!loggedIn) {
-        // "Confirm email" is on: the first login after confirming finishes step 2
-        show.success("Account created! Confirm your email, then log in to finish.");
-        return;
-      }
-      onRegisterSuccess(await registerForRole(registration));
+      // creates the account for the chosen role and logs in (one backend call)
+      const registration = { role, name, restaurantName };
+      onRegisterSuccess(await signUp(email, password, registration));
     } catch (error) {
       show.error(error.message);
     } finally {

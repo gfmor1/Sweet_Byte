@@ -31,9 +31,9 @@ public class Courier extends User {
     protected Courier() { }
 
     // New couriers always start OFFLINE.
-    public Courier(UUID supabaseUid, String name, String email,
+    public Courier(UUID authUid, String name, String email,
                    double latitude, double longitude) {
-        super(supabaseUid, name, email, Role.COURIER);
+        super(authUid, name, email, Role.COURIER);
         updateLocation(latitude, longitude);
     }
 

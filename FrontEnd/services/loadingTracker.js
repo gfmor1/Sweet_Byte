@@ -6,7 +6,7 @@ function notify() {
   listeners.forEach((listener) => listener(pending > 0));
 }
 
-// Wrap any promise (API call, Supabase call) to show the loading bar until it settles
+// Wrap any promise (API call) to show the loading bar until it settles
 export function trackLoading(promise) {
   pending++;
   notify();

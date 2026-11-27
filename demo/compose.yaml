@@ -3,15 +3,15 @@
 #   frontend  Next.js (next start :3001)
 #   backend   Spring Boot (:8080), schema by JPA, demo data by SeedDataLoader at startup
 #   db        local Postgres (replaces the hosted Supabase database)
-# Login still uses the team's hosted Supabase Auth project.
-# Replace each REPLACE-WITH-COMMIT-SHA with the tag printed by the "Publish demo images" workflow.
+# Login is handled by the backend itself (JWT), so the demo needs no external service and no secret.
+# Image tags: the commit SHA printed by the "Publish demo images" workflow (run on 134ce5f). Update after each publish.
 x-demo:
   web: web
   port: 80
 
 services:
   web:
-    image: ghcr.io/gfmor1/sweet_byte-web:REPLACE-WITH-COMMIT-SHA
+    image: ghcr.io/gfmor1/sweet_byte-web:134ce5f1f6dbf2d0eec0af4c907911d76b3b0320
     depends_on:
       frontend:
         condition: service_healthy
@@ -19,7 +19,7 @@ services:
         condition: service_healthy
 
   frontend:
-    image: ghcr.io/gfmor1/sweet_byte-frontend:REPLACE-WITH-COMMIT-SHA
+    image: ghcr.io/gfmor1/sweet_byte-frontend:134ce5f1f6dbf2d0eec0af4c907911d76b3b0320
     healthcheck:
       test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/3001'"]
       interval: 5s
@@ -28,7 +28,7 @@ services:
       start_period: 5s
 
   backend:
-    image: ghcr.io/gfmor1/sweet_byte-backend:REPLACE-WITH-COMMIT-SHA
+    image: ghcr.io/gfmor1/sweet_byte-backend:134ce5f1f6dbf2d0eec0af4c907911d76b3b0320
     depends_on:
       db:
         condition: service_healthy
@@ -36,10 +36,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/sweetbyte
       SPRING_DATASOURCE_USERNAME: sweetbyte
       SPRING_DATASOURCE_PASSWORD: demo-password
-      # Creates/finds the demo users' Supabase Auth accounts at startup. Without it the app starts,
-      # but only restaurants and menus are seeded (no demo logins). Save it on the platform's
-      # Secrets page first, or delete this line.
-      SUPABASE_SERVICE_ROLE_KEY: ${secret:SUPABASE_SERVICE_ROLE_KEY}
+      # Login tokens are signed with a random key chosen at each start (a restart logs everyone out).
+      # To keep logins across restarts, save a JWT_SECRET (32+ characters) on the platform's
+      # Secrets page and add:  JWT_SECRET: ${secret:JWT_SECRET}
       # trust X-Forwarded-* from the platform edge (passed on by nginx)
       SERVER_FORWARD_HEADERS_STRATEGY: framework
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50

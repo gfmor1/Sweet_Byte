@@ -3,6 +3,8 @@
 This guide takes your group from a project that runs on your laptop with `docker compose up --build` to a demo that your classmates can open at `https://<your-group>.<demo-domain>`.
 It is written for students, but TAs use it too, so they can help any group.
 
+**Not sure where to start? [Choose your route](/guide/start/).** This page is the full reference; each route has its own short page.
+
 You do not need to learn anything new about Docker.
 You need to do four things:
 
@@ -15,12 +17,10 @@ You need to do four things:
 
 ## Contents
 
-- [Choose your route](#choose-your-route)
 - [The short version](#short-version)
 - [Step 1: publish your images with GitHub Actions](#publish-images)
 - [Step 2: make the packages public (or use a token)](#make-packages-public)
 - [Building images from your laptop](#building-images)
-- [Route C: ask a TA](#ask-a-ta)
 - [Step 3: convert your compose file](#convert-compose)
 - [Keys that are dropped or rejected](#dropped-and-rejected-keys)
 - [One public address: the `/api` proxy](#public-entry-point)
@@ -33,27 +33,6 @@ You need to do four things:
 - [Step 4: rehearse, check, submit](#rehearse)
 - [Errors about the file itself](#compose-file-shape)
 - [FAQ](#faq)
-
-<a id="choose-your-route"></a>
-## Choose your route
-
-There are three ways to get a project onto the platform. All three end with the same compose file and the same checks.
-
-| | A: AI agent | B: By hand | C: Ask a TA |
-|---|---|---|---|
-| Suits | A group that wants speed and will review the result | A group that wants to learn the steps | A group that is stuck |
-| You do | Give an agent the kit, review its work, publish, submit | Follow this guide, Step 1 to Step 4 | Send a TA what they need |
-| Steps | Route A, below | [Step 1](#publish-images) | [Route C](#ask-a-ta) |
-
-You can switch routes at any time. The [platform overview](/guide/overview/) shows the whole path in pictures.
-
-### Route A: with an AI agent
-
-1. Download the [agent kit](/guide/agent-kit.zip) and unzip it. Copy `AGENTS.md`, `CLAUDE.md` and the `demo-platform/` folder to the root of your repository.
-2. Ask your agent: "Make this project ready for the demo platform, following AGENTS.md."
-3. **Review every change.** Your group answers for what it commits, whoever wrote it.
-4. **Never give an agent a secret.** Not in the chat, not in a file. Passwords, tokens and API keys stay out of the conversation.
-5. Publish the images and submit yourselves: [Step 1](#publish-images) to [Step 4](#rehearse).
 
 <a id="short-version"></a>
 ## The short version
@@ -77,14 +56,16 @@ GitHub builds your images for you, for the right CPU type (`linux/amd64`, what t
 You do not install anything and you do not need a password or token.
 
 1. In your group's repository, create the file `.github/workflows/publish-demo-images.yml` and paste the workflow below.
-2. Edit **one line**, `SERVICES`: list the folders that have a `Dockerfile`, separated by spaces. For example `backend frontend`, or `server client`.
-3. Commit and push to your default branch (usually `main`).
-4. On GitHub, open the **Actions** tab, then the run, then its **Summary**. It prints the exact `image:` lines to paste into your compose file.
+2. Edit `SERVICES`: list the folders that have a `Dockerfile`, separated by spaces. For example `backend frontend`, or `server client`. Change `COMPOSE_FILE` only if your compose file is not at `demo/compose.yaml`. The first run works before that file exists: it only needs `SERVICES`.
+3. Commit and push to your default branch (usually `main`). Pushing starts the workflow by itself; you do not start it.
+4. When it finishes (a few minutes), open the **Actions** tab on GitHub, click that run, then its **Summary**. It prints the exact `image:` lines to paste into your compose file. The Actions tab is only where you read the result.
 
 Each image is named `ghcr.io/<owner>/<repo>-<folder>:<commit SHA>`.
 The tag is the commit, so the image never changes after it is pushed. When you change your code, push again and paste the new lines.
 
-The workflow runs only for the default branch and for tags, and it uses only the token GitHub gives every run (`packages: write` and `contents: read`).
+Before it builds, a first job stops with a clear message if `demo/compose.yaml` has `build` or `env_file`, if a folder in `SERVICES` has no `Dockerfile`, or if `.env` or `.env.local` is committed. It only warns when `demo/compose.yaml` does not exist yet, when it has `ports` (the platform drops it; the public port comes from `x-demo`), when another `.env.*` file is committed, or when an image tag is a placeholder, because the compose file and the real tag come after the first run. Put your compose file at `demo/compose.yaml` (the check reads `COMPOSE_FILE` at the top of the workflow, which you can change).
+
+The workflow runs on its own on every push to the default branch and on tags. A push to another branch shows a grey, skipped run: that is normal. The **Run workflow** button in the Actions tab only runs it again on the default branch. The workflow uses only the token GitHub gives every run (`packages: write` and `contents: read`).
 You add no secrets, and you never give the platform access to your repository.
 
 ```yaml
@@ -93,6 +74,7 @@ You add no secrets, and you never give the platform access to your repository.
 # How to use it (details in starter-kit/README.md):
 #   1. Copy this file to .github/workflows/publish-demo-images.yml in your repository.
 #   2. Edit SERVICES below: one folder per image, each with its own Dockerfile.
+#      COMPOSE_FILE is where your compose file lives (demo/compose.yaml is recommended).
 #   3. Push to the default branch. Open the run's summary: it prints the `image:` lines to paste
 #      into your compose file.
 #   4. The first time, GHCR makes each package private. Public is the simplest for the platform;
@@ -103,6 +85,10 @@ You add no secrets, and you never give the platform access to your repository.
 # Each image is built for linux/amd64 (the platform's architecture) and named
 #   ghcr.io/<owner>/<repo>-<service>:<commit SHA>
 # The tag is the commit SHA, so an image never changes after it is pushed.
+# Before building, a first job ("check") fails the run with a clear message if demo/compose.yaml
+# uses build or env_file, if a folder in SERVICES has no Dockerfile, or if .env or .env.local is
+# committed. A missing compose file, ports, another .env.* file or a placeholder image tag only
+# warns, because the compose file and the real tag come after the first run. The platform's "Check compose file" page stays the complete check.
 # It needs no secrets: it uses the token that GitHub gives every workflow run. That token is for
 # pushing only. The platform needs its own read-only token to pull a private package.
 
@@ -119,13 +105,95 @@ env:
   # service name (backend -> ghcr.io/<owner>/<repo>-backend). Use `.` for a repository whose
   # Dockerfile is at the top level (the service is then called "app").
   SERVICES: "backend frontend"
+  # Your compose file. Change it only if your group keeps it somewhere else.
+  COMPOSE_FILE: demo/compose.yaml
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  check:
+    # Same condition as publish, so a work-in-progress branch is not checked either.
+    if: github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check the compose file and the service folders
+        run: |
+          set -u
+          compose="${COMPOSE_FILE:-demo/compose.yaml}"
+          failed=0
+          fail() { echo "::error::$*"; failed=1; }
+          warn() { echo "::warning::$*"; }
+          scan="${RUNNER_TEMP:-/tmp}/compose-scan.txt"
+          : > "$scan"
+          if [ ! -f "$compose" ]; then
+            warn "$compose does not exist yet. That is fine for the first run: images are built either way. Write demo/compose.yaml in Step 3 and keep placeholder image lines until this run prints the real ones."
+          else
+            # Service keys and image values, from the lines of the services: section.
+            awk '
+              { sub(/\r$/, "") }
+              /^[ \t]*(#.*)?$/ { next }
+              { match($0, /^ */); indent = RLENGTH }
+              indent == 0 { in_services = ($0 ~ /^services:/); next }
+              !in_services { next }
+              svc_indent == "" { svc_indent = indent }
+              indent == svc_indent { svc = $1; sub(/:.*/, "", svc); key_indent = ""; next }
+              key_indent == "" { key_indent = indent }
+              indent == key_indent {
+                key = $1; sub(/:.*/, "", key)
+                if (key == "build" || key == "ports" || key == "env_file")
+                  printf "BAD %d %s %s\n", NR, svc, key
+                if (key == "image") {
+                  v = $0; sub(/^[^:]*:[ \t]*/, "", v); sub(/[ \t]+#.*$/, "", v); gsub(/["\047]/, "", v)
+                  printf "IMAGE %d %s %s\n", NR, svc, v
+                }
+              }
+            ' "$compose" > "$scan"
+            while read -r kind line svc value; do
+              case "$kind" in
+                BAD)
+                  case "$value" in
+                    build) fail "$compose line $line: service '$svc' has 'build:'. The platform rejects it. Use 'image:' with the line the workflow prints in its summary." ;;
+                    env_file) fail "$compose line $line: service '$svc' has 'env_file:'. The platform rejects it. Put the values in 'environment:', or use the platform's Secrets page for secrets." ;;
+                    ports) warn "$compose line $line: service '$svc' has 'ports:'. The platform drops it; the public port comes from x-demo. Remove it (use a separate rehearse file on your laptop)." ;;
+                  esac
+                  ;;
+                IMAGE)
+                  lower="$(echo "$value" | tr '[:upper:]' '[:lower:]')"
+                  tag=""
+                  case "${value##*/}" in *:*) tag="${value##*:}" ;; esac
+                  ltag="$(echo "$tag" | tr '[:upper:]' '[:lower:]')"
+                  case "$lower:$ltag" in
+                    *"<"*|*">"*|*your-team*|*your-repo*|*:*todo*|*:*placeholder*|*:*changeme*|*:0123456789abcdef*)
+                      warn "$compose line $line: image of '$svc' looks like a placeholder ($value). Paste the image line this workflow prints, then push again." ;;
+                    ghcr.io/*)
+                      if [ -z "$tag" ] || [ "$tag" = "latest" ]; then
+                        warn "$compose line $line: image of '$svc' has no fixed tag ($value). Use the commit SHA tag the workflow prints."
+                      fi ;;
+                  esac
+                  ;;
+              esac
+            done < "$scan"
+          fi
+          for dir in $SERVICES; do
+            if [ ! -f "$dir/Dockerfile" ]; then
+              fail "SERVICES lists '$dir' but $dir/Dockerfile does not exist. Fix SERVICES or add the Dockerfile."
+            fi
+          done
+          # Tracked .env files: .env and .env.local are secrets; other .env.* only warn.
+          for f in $(git ls-files | grep -E '(^|/)\.env(\.[^/]*)?$' | grep -Ev '\.(example|sample|template)$' || true); do
+            case "${f##*/}" in
+              .env|.env.local) fail "A .env file is committed: $f. Remove it from git (git rm --cached) and rotate any secret in it." ;;
+              *) warn "$f is committed. Make sure it holds no secret; the platform does not read it." ;;
+            esac
+          done
+          exit "$failed"
+
   publish:
+    needs: check
     # Only the default branch and tags publish, so a work-in-progress branch does not.
     if: github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
@@ -185,11 +253,19 @@ If a run fails, open it and read the red step. The usual causes are a wrong fold
 
 The first time, GHCR makes every package **private**. Public is still the simplest path, because it needs nothing more. A private package also works if your group stores a read-only token on the platform: see [Secrets and private images](#secrets-and-private-images). To make a package public:
 
-1. Open your profile (or your organization) on GitHub, then **Packages**.
-2. Open the package (for example `myrepo-backend`).
-3. **Package settings**, then **Change visibility**, then **Public**.
+1. On your repository's main page, the right column has a **Packages** box. Click the package (there is one per service; "+ N packages" shows the rest). If the box is missing, open your GitHub profile or organization, then its **Packages** tab.
 
-Do this once per package. Later pushes keep the setting.
+    ![The repository main page, with the Packages box in the right column highlighted](/static/guide/packages-sidebar.png)
+
+2. On the package page, click **Package settings** at the bottom of the right column.
+
+    ![The package page, with the Package settings link at the bottom of the right column highlighted](/static/guide/package-settings.png)
+
+3. At the bottom, in the **Danger Zone**, click **Change visibility**, choose **Public** and confirm by typing the package name.
+
+    ![The Danger Zone of the package settings, with the Change visibility button highlighted](/static/guide/change-visibility.png)
+
+Do this once for every package. Later pushes keep the setting.
 You can check from any computer that is not signed in to GitHub: `docker pull ghcr.io/<owner>/<repo>-backend:<commit>` must work.
 
 Public means anyone can download the image. **Never put passwords, API keys or private data inside an image.**
@@ -219,33 +295,14 @@ docker buildx imagetools inspect ghcr.io/<owner>/<repo>-backend:v1
 
 Then make the package public (Step 2). Use a new tag (`v2`, `v3`, ...) for every push. Reusing a tag works, but a new tag is easier to follow.
 
-Building `linux/amd64` on an Apple-silicon Mac runs the build under emulation, so it is slower, and a few tools fail there. For example, the Maven wrapper (`./mvnw`) can stop with `tar: ... Cannot open: Function not implemented` while unpacking Maven. If that happens, use GitHub Actions (Step 1), which builds on real `amd64` machines, or [ask a TA](#ask-a-ta).
+Building `linux/amd64` on an Apple-silicon Mac runs the build under emulation, so it is slower, and a few tools fail there. For example, the Maven wrapper (`./mvnw`) can stop with `tar: ... Cannot open: Function not implemented` while unpacking Maven. If that happens, use GitHub Actions (Step 1), which builds on real `amd64` machines, or [ask a TA](/guide/route-c/).
 
 If you see `exec format error` when running an image on the platform, or the submission page says the image "provides only linux/arm64", the image was built without `--platform linux/amd64`.
-
-<a id="ask-a-ta"></a>
-## Route C: ask a TA
-
-If you are stuck, a TA can build your images and submit your compose file for you.
-
-Send the TA these, at **[TA contact: the instructor fills this in]**:
-
-- your repository link and the branch to use (give the TA access to it),
-- how to run the project (the command, or the README section),
-- the folders that have a `Dockerfile`,
-- the **names** of the environment variables the app needs. Never send their values.
-
-Then:
-
-- You enter your own secrets on your group's **Secrets** page. The TA never needs them.
-- The submission is recorded under the TA's name, and your group sees it in the submission history.
-- Send your request **at least one week before the demo**.
-- Check your own demo once it is live: open it, log in, and do one action that saves data.
 
 <a id="convert-compose"></a>
 ## Step 3: convert your compose file
 
-Your local compose file is for your laptop. The platform needs a stricter version.
+Your local compose file is for your laptop. The platform needs a stricter version. **Save it as `demo/compose.yaml`**, next to your own compose file, so the workflow check and the agent kit find it, and so you submit exactly that file.
 Three changes are always needed:
 
 - Replace every `build` with an `image` (the line from Step 1).
@@ -372,7 +429,7 @@ If you keep `ports` or `container_name`, nothing breaks. The platform ignores th
 | `version` | Obsolete in Compose. |
 | `ports` | Only the `x-demo` service is published. |
 | `container_name` | The platform names containers. |
-| `restart` | The platform sets `restart: on-failure`. |
+| `restart` | The platform sets `restart: on-failure`, and no restart for a one-shot service (see below). |
 | `networks` (without options) | All your services share one private network. |
 
 **Rejected** (the file is not accepted):
@@ -670,7 +727,9 @@ Spring Boot can take 15 to 40 seconds to start (about 20 seconds on a 1 vCPU cap
       start_period: 10s
 ```
 
-`restart` is always `on-failure`.
+`restart` is always `on-failure`, with one exception: a **one-shot** service gets no restart. A one-shot is a service that another service waits for with `condition: service_completed_successfully`, such as a `migrate` job. If it exits with an error, it stays stopped and the deploy fails within seconds, instead of retrying until the deploy times out. So a one-shot must not rely on Docker restarting it until the database is ready: make it wait for the database with `condition: service_healthy` on the database's health check.
+
+When a deploy fails, the deploy log on the Logs page says which service failed and how ("migrate exited with code 2") and shows the last lines that service printed.
 
 **Streaming.** Responses are delivered whole. Server-sent events (`text/event-stream`) and long streaming downloads do not work. WebSockets do.
 
@@ -709,7 +768,7 @@ Run the converted file **exactly as the platform will**: only published images, 
 Add a small second file that publishes the public service on your laptop (the platform ignores `ports`; your laptop needs it):
 
 ```yaml
-# rehearse.yaml
+# demo/rehearse.yaml
 services:
   client:           # the service named in x-demo
     ports:
@@ -717,10 +776,10 @@ services:
 ```
 
 ```bash
-docker compose -f compose.yaml -f rehearse.yaml up
+docker compose -f demo/compose.yaml -f demo/rehearse.yaml up
 ```
 
-Open `http://localhost:8080`. Click through the demo with an empty database. Then stop it with `Ctrl+C` and `docker compose -f compose.yaml -f rehearse.yaml down -v`, and start it again to see that the seed works from scratch.
+Open `http://localhost:8080`. Click through the demo with an empty database. Then stop it with `Ctrl+C` and `docker compose -f demo/compose.yaml -f demo/rehearse.yaml down -v`, and start it again to see that the seed works from scratch.
 On an Apple-silicon Mac, `linux/amd64` images run under emulation, so they are slower than on the platform. That is normal.
 
 ### Check the file
@@ -729,7 +788,7 @@ Open **Check compose file** in the platform's menu, paste your compose file and 
 
 ### Submit
 
-On your group page, open **Submit a stack**, upload or paste the file and submit. The platform then:
+On your group page, open **Submit a stack**, upload or paste your `demo/compose.yaml` and submit. The platform then:
 
 1. checks the file again,
 2. looks up each image in its registry and checks that it has `linux/amd64` (a private image is checked by the deployer, with your group's token),
@@ -766,9 +825,9 @@ Short answers. Each links to the section with the detail.
 
 **Choosing a route**
 
-- **Which route fits us, and can we switch?** A to go fast and review the result, B to learn the steps, C if you are stuck. You can switch at any time. [Choose your route](#choose-your-route)
-- **What can an agent not do?** Publish for you, make packages public, save secrets or submit. Those steps are yours. [Route A](#choose-your-route)
-- **The agent broke our code.** Review its diff and revert what you do not want. Your group answers for every commit. [Route A](#choose-your-route)
+- **Which route fits us, and can we switch?** A to go fast and review the result, B to learn the steps, C if you are stuck. You can switch at any time. [Choose your route](/guide/start/)
+- **What can an agent not do?** Publish for you, make packages public, save secrets or submit. Those steps are yours. [Route A](/guide/route-a/)
+- **The agent broke our code.** Review its diff and revert what you do not want. Your group answers for every commit. [Route A](/guide/route-a/)
 
 **Images and GHCR**
 
@@ -808,7 +867,7 @@ Short answers. Each links to the section with the detail.
 
 **Deploying**
 
-- **The status is stuck or failed.** A deploy waits up to 5 minutes, then fails. Read the deploy log on the Logs page, then the service it names. [Submit](#rehearse)
+- **The status is stuck or failed.** A deploy waits up to 5 minutes, then fails. Read the deploy log on the Logs page: it names the failing service and shows its last output. [Submit](#rehearse)
 - **How do I redeploy or go back?** Submit again, or roll back from the Submissions page. The old version stays up if a new one fails. [Submit](#rehearse)
 - **What are my limits?** 2 GB, 1 vCPU, up to 8 services. [Limits](#limits)
 
@@ -820,4 +879,4 @@ Short answers. Each links to the section with the detail.
 
 **Getting help**
 
-- **What do I send a TA, and by when?** Repository link, branch, how to run it and the names of your env vars, never values, at least one week before the demo. [Route C](#ask-a-ta)
+- **What do I send a TA, and by when?** Repository link, branch, how to run it and the names of your env vars, never values, at least one week before the demo. [Route C](/guide/route-c/)

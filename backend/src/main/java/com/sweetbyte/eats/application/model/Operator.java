@@ -13,7 +13,7 @@ public class Operator extends User {
 
     protected Operator() { }
 
-    public Operator(UUID supabaseUid, String name, String email) {
-        super(supabaseUid, name, email, Role.OPERATOR);
+    public Operator(UUID authUid, String name, String email) {
+        super(authUid, name, email, Role.OPERATOR);
     }
 }

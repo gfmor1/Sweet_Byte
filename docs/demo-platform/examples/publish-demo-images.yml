@@ -1,0 +1,175 @@
+# Publishes the Docker images of your demo to GHCR (GitHub's container registry).
+#
+# How to use it (details in starter-kit/README.md):
+#   1. Copy this file to .github/workflows/publish-demo-images.yml in your repository.
+#   2. Edit SERVICES below: one folder per image, each with its own Dockerfile.
+#      COMPOSE_FILE is where your compose file lives (demo/compose.yaml is recommended).
+#   3. Push to the default branch. Open the run's summary: it prints the `image:` lines to paste
+#      into your compose file.
+#   4. The first time, GHCR makes each package private. Public is the simplest for the platform;
+#      a private package also works if your group adds a read-only token on the platform
+#      (see "Secrets and private images" in the guide). To make it public: Your profile or
+#      organization > Packages > the package > Package settings > Change visibility > Public.
+#
+# Each image is built for linux/amd64 (the platform's architecture) and named
+#   ghcr.io/<owner>/<repo>-<service>:<commit SHA>
+# The tag is the commit SHA, so an image never changes after it is pushed.
+# Before building, a first job ("check") fails the run with a clear message if demo/compose.yaml
+# uses build or env_file, if a folder in SERVICES has no Dockerfile, or if .env or .env.local is
+# committed. A missing compose file, ports, another .env.* file or a placeholder image tag only
+# warns, because the compose file and the real tag come after the first run. The platform's "Check compose file" page stays the complete check.
+# It needs no secrets: it uses the token that GitHub gives every workflow run. That token is for
+# pushing only. The platform needs its own read-only token to pull a private package.
+
+name: Publish demo images
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  workflow_dispatch:
+
+env:
+  # EDIT THIS: the folders to build, separated by spaces. The last part of the folder name is the
+  # service name (backend -> ghcr.io/<owner>/<repo>-backend). Use `.` for a repository whose
+  # Dockerfile is at the top level (the service is then called "app").
+  SERVICES: "backend frontend"
+  # Your compose file. Change it only if your group keeps it somewhere else.
+  COMPOSE_FILE: demo/compose.yaml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  check:
+    # Same condition as publish, so a work-in-progress branch is not checked either.
+    if: github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Check the compose file and the service folders
+        run: |
+          set -u
+          compose="${COMPOSE_FILE:-demo/compose.yaml}"
+          failed=0
+          fail() { echo "::error::$*"; failed=1; }
+          warn() { echo "::warning::$*"; }
+          scan="${RUNNER_TEMP:-/tmp}/compose-scan.txt"
+          : > "$scan"
+          if [ ! -f "$compose" ]; then
+            warn "$compose does not exist yet. That is fine for the first run: images are built either way. Write demo/compose.yaml in Step 3 and keep placeholder image lines until this run prints the real ones."
+          else
+            # Service keys and image values, from the lines of the services: section.
+            awk '
+              { sub(/\r$/, "") }
+              /^[ \t]*(#.*)?$/ { next }
+              { match($0, /^ */); indent = RLENGTH }
+              indent == 0 { in_services = ($0 ~ /^services:/); next }
+              !in_services { next }
+              svc_indent == "" { svc_indent = indent }
+              indent == svc_indent { svc = $1; sub(/:.*/, "", svc); key_indent = ""; next }
+              key_indent == "" { key_indent = indent }
+              indent == key_indent {
+                key = $1; sub(/:.*/, "", key)
+                if (key == "build" || key == "ports" || key == "env_file")
+                  printf "BAD %d %s %s\n", NR, svc, key
+                if (key == "image") {
+                  v = $0; sub(/^[^:]*:[ \t]*/, "", v); sub(/[ \t]+#.*$/, "", v); gsub(/["\047]/, "", v)
+                  printf "IMAGE %d %s %s\n", NR, svc, v
+                }
+              }
+            ' "$compose" > "$scan"
+            while read -r kind line svc value; do
+              case "$kind" in
+                BAD)
+                  case "$value" in
+                    build) fail "$compose line $line: service '$svc' has 'build:'. The platform rejects it. Use 'image:' with the line the workflow prints in its summary." ;;
+                    env_file) fail "$compose line $line: service '$svc' has 'env_file:'. The platform rejects it. Put the values in 'environment:', or use the platform's Secrets page for secrets." ;;
+                    ports) warn "$compose line $line: service '$svc' has 'ports:'. The platform drops it; the public port comes from x-demo. Remove it (use a separate rehearse file on your laptop)." ;;
+                  esac
+                  ;;
+                IMAGE)
+                  lower="$(echo "$value" | tr '[:upper:]' '[:lower:]')"
+                  tag=""
+                  case "${value##*/}" in *:*) tag="${value##*:}" ;; esac
+                  ltag="$(echo "$tag" | tr '[:upper:]' '[:lower:]')"
+                  case "$lower:$ltag" in
+                    *"<"*|*">"*|*your-team*|*your-repo*|*:*todo*|*:*placeholder*|*:*changeme*|*:0123456789abcdef*)
+                      warn "$compose line $line: image of '$svc' looks like a placeholder ($value). Paste the image line this workflow prints, then push again." ;;
+                    ghcr.io/*)
+                      if [ -z "$tag" ] || [ "$tag" = "latest" ]; then
+                        warn "$compose line $line: image of '$svc' has no fixed tag ($value). Use the commit SHA tag the workflow prints."
+                      fi ;;
+                  esac
+                  ;;
+              esac
+            done < "$scan"
+          fi
+          for dir in $SERVICES; do
+            if [ ! -f "$dir/Dockerfile" ]; then
+              fail "SERVICES lists '$dir' but $dir/Dockerfile does not exist. Fix SERVICES or add the Dockerfile."
+            fi
+          done
+          # Tracked .env files: .env and .env.local are secrets; other .env.* only warn.
+          for f in $(git ls-files | grep -E '(^|/)\.env(\.[^/]*)?$' | grep -Ev '\.(example|sample|template)$' || true); do
+            case "${f##*/}" in
+              .env|.env.local) fail "A .env file is committed: $f. Remove it from git (git rm --cached) and rotate any secret in it." ;;
+              *) warn "$f is committed. Make sure it holds no secret; the platform does not read it." ;;
+            esac
+          done
+          exit "$failed"
+
+  publish:
+    needs: check
+    # Only the default branch and tags publish, so a work-in-progress branch does not.
+    if: github.ref_type == 'tag' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
+
+      - uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push every service
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          owner="${OWNER,,}"
+          repo="${REPO,,}"
+          {
+            echo "### Images for your compose file"
+            echo
+            echo "Paste each line as the \`image:\` of the matching service."
+            echo
+            echo '```yaml'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for dir in $SERVICES; do
+            name="$(basename "$(realpath "$dir")")"
+            [ "$dir" = "." ] && name="app"
+            name="$(echo "$name" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9\n-' '-')"
+            image="ghcr.io/${owner}/${repo}-${name}:${SHA}"
+            echo "::group::Build ${image}"
+            docker buildx build \
+              --platform linux/amd64 \
+              --provenance=false \
+              --label "org.opencontainers.image.source=https://github.com/${REPOSITORY}" \
+              --tag "$image" \
+              --push \
+              "$dir"
+            echo "::endgroup::"
+            echo "# ${dir}" >> "$GITHUB_STEP_SUMMARY"
+            echo "image: ${image}" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "Public packages work as they are. For a private package, add a read-only token on the platform (guide: Secrets and private images)." >> "$GITHUB_STEP_SUMMARY"

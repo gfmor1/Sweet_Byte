@@ -1,6 +1,6 @@
 # SweetByte: one image with the Spring Boot backend (:8080) and the Next.js frontend (:3001).
 #
-# DB password and Supabase service-role key: backend/src/main/resources/application-local.properties (gitignored).
+# DB password: backend/src/main/resources/application-local.properties (gitignored). Optional JWT_SECRET env var.
 # Geoapify key (browser, address search): --build-arg NEXT_PUBLIC_GEOAPIFY_API_KEY=... (never commit it).
 #
 # Build:  docker build -t sweetbyte .   (demo platform: see demo/compose.yaml instead)

@@ -18,7 +18,7 @@ function AppContent() {
   useEffect(() => {
     getCurrentUser()
       .then((currentUser) => setUser(currentUser))
-      // e.g. Supabase session without a SweetByte account (403 "register first")
+      // e.g. a token whose account no longer exists (403)
       .catch((error) => setSessionMessage(error.message))
       .finally(() => setCheckingSession(false));
 
