@@ -60,6 +60,63 @@ function RestaurantList({
 
   useEffect(() => () => report.current?.(null), []);
 
+  const activeList = visible.filter((r) => r.status === "OPEN");
+  const otherList = visible.filter((r) => r.status !== "OPEN");
+
+  // The queue only matters for restaurants that are taking orders, so paused/closed ones show no queue.
+  function renderCard(restaurant) {
+    return (
+      <li
+        key={restaurant.id}
+        className={`card ${styles.card} ${restaurant.status === "OPEN" ? "" : styles.cardMuted}`}
+      >
+        <div className={styles.cardHead}>
+          <h3 className={styles.cardTitle}>{restaurant.name}</h3>
+
+          <p className={`${styles.meta} ${styles.cardStatus}`}>
+            <span className={`${styles.badge} ${STATUS_CLASS[restaurant.status] || ""}`}>
+              {formatEnum(restaurant.status)}
+            </span>
+          </p>
+        </div>
+
+        {restaurant.status === "OPEN" &&
+          restaurant.queueSize !== undefined &&
+          restaurant.queueSize !== null && (
+            <p className={styles.meta}>
+              <QueueBadge size={restaurant.queueSize} status={restaurant.status} />
+            </p>
+          )}
+
+        <div className={styles.cardActions}>
+          <button
+            className="btn-secondary"
+            onClick={() => onSelect(restaurant)}
+            aria-label={`View menu of ${restaurant.name}`}
+          >
+            View Menu
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  function renderGroup(title, list, emptyText) {
+    return (
+      <>
+        <div className={styles.groupHead}>
+          <h3>{title}</h3>
+          <span className={styles.groupCount}>{list.length}</span>
+        </div>
+        {list.length === 0 ? (
+          <p className={styles.hint}>{emptyText}</p>
+        ) : (
+          <ul className={styles.grid}>{list.map(renderCard)}</ul>
+        )}
+      </>
+    );
+  }
+
   return (
     <section className={styles.section} aria-labelledby="restaurants-heading">
       <div className={styles.headRow}>
@@ -115,42 +172,11 @@ function RestaurantList({
               )}
             </p>
           ) : (
-            <ul className={styles.grid}>
-              {visible.map((restaurant) => (
-                <li
-                  key={restaurant.id}
-                  className={`card ${styles.card} ${
-                    restaurant.status === "OPEN" ? "" : styles.cardMuted
-                  }`}
-                >
-                  <h3 className={styles.cardTitle}>{restaurant.name}</h3>
-
-                  <p className={styles.meta}>
-                    <span
-                      className={`${styles.badge} ${
-                        STATUS_CLASS[restaurant.status] || ""
-                      }`}
-                    >
-                      {formatEnum(restaurant.status)}
-                    </span>{" "}
-                    {restaurant.queueSize !== undefined &&
-                      restaurant.queueSize !== null && (
-                        <QueueBadge size={restaurant.queueSize} status={restaurant.status} />
-                      )}
-                  </p>
-
-                  <div className={styles.cardActions}>
-                    <button
-                      className="btn-secondary"
-                      onClick={() => onSelect(restaurant)}
-                      aria-label={`View menu of ${restaurant.name}`}
-                    >
-                      View Menu
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              {renderGroup("Active restaurants", activeList, "No active restaurants match your search.")}
+              {!openOnly &&
+                renderGroup("Other (paused or closed)", otherList, "No paused or closed restaurants match your search.")}
+            </>
           )}
         </>
       )}

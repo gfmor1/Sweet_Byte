@@ -22,10 +22,11 @@ import {
   getSavedCard,
   paymentsEnabled,
 } from "../services/paymentApi";
-import RefundedNotice from "../features/payment/RefundedNotice";
 import OrderHistory from "../features/pricing/OrderHistory";
+import RefundedNotice from "../features/payment/RefundedNotice";
 import OrderSummary from "../features/pricing/OrderSummary";
 import RefundPanel from "../features/refunds/RefundPanel";
+import NoticeModal from "../features/shared/NoticeModal";
 import styles from "../features/customer/customer.module.css";
 import { isValidDelivery } from "../features/customer/deliveryAddress.mjs";
 
@@ -51,6 +52,11 @@ export default function CustomerDashboard({ user, onLog }) {
 
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  // Kept separately from `error`: the 5s auto-refresh clears `error`, but this dialog must stay until closed.
+  const [cardNotice, setCardNotice] = useState("");
+  useEffect(() => {
+    if (error.startsWith("Add a payment card first")) setCardNotice(error);
+  }, [error]);
 
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -265,7 +271,7 @@ export default function CustomerDashboard({ user, onLog }) {
 
   async function handlePlaceOrder(
     items,
-    { subtotal = 0, delivery } = {}
+    { subtotal = 0, delivery, promoCode = null } = {}
   ) {
     if (placingOrder.current || !selectedRestaurant) {
       return false;
@@ -305,7 +311,8 @@ export default function CustomerDashboard({ user, onLog }) {
         restaurantId,
         items,
         destination,
-        card
+        card,
+        promoCode
       );
 
       setPaymentsKey((previous) => previous + 1);
@@ -634,10 +641,14 @@ export default function CustomerDashboard({ user, onLog }) {
     </section>
   );
 
+  // Shown as a centered dialog instead of an inline line: the customer must add a card to order.
+  const isNoCardError = error.startsWith("Add a payment card first");
+
   const historyContent = loaded ? (
     <>
       <OrderHistory
         refreshKey={refreshKey}
+        showPromo
         ownerOrderIds={orders.map((order) => order.id)}
         onLog={onLog}
       />
@@ -717,10 +728,27 @@ export default function CustomerDashboard({ user, onLog }) {
         </button>
       </div>
 
-      {error && (
+      {error && !isNoCardError && (
         <p role="alert" className="error-message">
           {error}
         </p>
+      )}
+
+      {cardNotice && (
+        <NoticeModal
+          title="Payment card required"
+          message={cardNotice}
+          actionLabel={paymentsEnabled ? "Go to Payments" : undefined}
+          onAction={() => {
+            setCardNotice("");
+            setError("");
+            setActiveTab("payments");
+          }}
+          onClose={() => {
+            setCardNotice("");
+            setError("");
+          }}
+        />
       )}
 
       {message && <p role="status">{message}</p>}

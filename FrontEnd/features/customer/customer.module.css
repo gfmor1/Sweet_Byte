@@ -63,6 +63,9 @@
 .cardSelected { outline: 2px solid #0b57d0; }
 
 .cardTitle { margin: 0 0 0.25rem; font-size: 1.05rem; }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+.cardHead .cardTitle { margin: 0; min-width: 0; }
+.cardStatus { margin: 0; flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.25rem; }
 .meta { margin: 0.25rem 0; font-size: 0.9rem; color: #555; }
 .cardActions { margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
@@ -298,3 +301,17 @@
 @media (max-width: 480px) {
   .step { flex-basis: 45%; }
 }
+
+/* Promo code (checkout) */
+.promoBox { margin: 1rem 0 0; max-width: 28rem; }
+.promoLabel { display: block; margin-bottom: 0.35rem; }
+.promoRow { display: flex; gap: 0.5rem; }
+.promoRow input { flex: 1 1 auto; min-width: 0; margin: 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.promoRow button { flex: 0 0 auto; min-width: 5.5rem; }
+.promoApplied { margin: 0.4rem 0 0; font-size: 0.88rem; font-weight: 600; color: #1e7a46; }
+.promoError { margin: 0.4rem 0 0; font-size: 0.88rem; color: var(--color-danger); }
+
+/* Restaurant list groups */
+.groupHead { display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0 0; }
+.groupHead h3 { margin: 0; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-muted); }
+.groupCount { padding: 0.05rem 0.55rem; border-radius: 999px; background: var(--color-primary-soft); color: var(--color-primary-dark); font-size: 0.8rem; font-weight: 700; }

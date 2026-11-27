@@ -63,7 +63,7 @@ export default function CustomerPaymentsPanel({ user, onLog, refreshKey = 0, onC
 
   return (
     <div className={styles.root}>
-      <h3>Payment method</h3>
+      <h3 className={styles.sectionTitle}>Payment method</h3>
       <PaymentCardForm card={card} onSave={handleSave} onRemove={handleRemove} busy={busy} />
       {error && <p role="alert" className={styles.error}>{error}</p>}
       <PaymentSummaryCards payments={payments} />

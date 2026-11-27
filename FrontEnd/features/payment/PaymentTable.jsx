@@ -22,7 +22,7 @@ export default function PaymentTable({ payments, loaded = true, showCustomer = f
   return (
     <section className={styles.root}>
       <div className={styles.head}>
-        <h3>Payments</h3>
+        <h3 className={styles.sectionTitle}>Payment history</h3>
         <span className={styles.muted}>{payments.length} total</span>
       </div>
 

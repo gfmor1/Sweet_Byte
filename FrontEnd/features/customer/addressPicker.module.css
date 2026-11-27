@@ -1,0 +1,54 @@
+/* Delivery address picker: same card / small-caps label look as the order summary and promo field. */
+.box {
+  margin: 1rem 0;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.legend { padding: 0 0.35rem; }
+
+.label { display: block; margin: 0 0 0.35rem; }
+
+.searchRow { display: flex; gap: 0.5rem; }
+.searchRow input { flex: 1 1 auto; min-width: 0; margin: 0; }
+.searchRow button { flex: 0 0 auto; white-space: nowrap; }
+
+.status { min-height: 1.2rem; margin: 0.5rem 0 0.25rem; font-size: 0.85rem; color: var(--color-muted); }
+
+.results { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 0.5rem; margin: 0.25rem 0 0.75rem; }
+.results:empty { display: none; }
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.result:hover { background: var(--color-primary-soft); }
+.result input { width: auto; margin: 0; accent-color: var(--color-primary); }
+.resultSelected { border-color: var(--color-primary); background: var(--color-primary-soft); font-weight: 600; }
+
+.unit { margin-top: 0.25rem; }
+.unit input { width: 100%; max-width: 20rem; margin: 0; }
+
+.deliverTo {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e7a46;
+  background: #eaf6ea;
+  border-radius: 10px;
+}
+
+.credit { display: block; margin-top: 0.75rem; font-size: 0.72rem; color: var(--color-muted); }
+.credit a { color: inherit; }
