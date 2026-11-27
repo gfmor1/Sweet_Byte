@@ -26,22 +26,33 @@ public class Fare {
     @Column(nullable = false, updatable = false, precision = 10, scale = 2)
     private BigDecimal smallOrderSurcharge;
 
+    @Column(nullable = false, updatable = false, precision = 10, scale = 2)
+    private BigDecimal discount;
+
     // Always subtotal + fees + surcharge; stored so the ledger/history can read it directly.
     @Column(nullable = false, updatable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
     // Required by JPA. Not for our code.
-    protected Fare() { }
+    protected Fare() {
+    }
 
     public Fare(BigDecimal subtotal, BigDecimal deliveryFee,
                 BigDecimal serviceFee, BigDecimal smallOrderSurcharge) {
+        this(subtotal, deliveryFee, serviceFee, smallOrderSurcharge, BigDecimal.ZERO);
+    }
+
+    public Fare(BigDecimal subtotal, BigDecimal deliveryFee,
+                BigDecimal serviceFee, BigDecimal smallOrderSurcharge, BigDecimal discount) {
         this.subtotal = money(subtotal, "subtotal");
         this.deliveryFee = money(deliveryFee, "deliveryFee");
         this.serviceFee = money(serviceFee, "serviceFee");
         this.smallOrderSurcharge = money(smallOrderSurcharge, "smallOrderSurcharge");
-        this.total = this.subtotal.add(this.deliveryFee)
+        this.discount = money(discount, "discount");
+        BigDecimal beforeDiscount = this.subtotal.add(this.deliveryFee)
                 .add(this.serviceFee)
                 .add(this.smallOrderSurcharge);
+        this.total = beforeDiscount.subtract(this.discount).max(BigDecimal.ZERO);
     }
 
     private static BigDecimal money(BigDecimal value, String name) {
@@ -52,11 +63,29 @@ public class Fare {
         return value.setScale(2, RoundingMode.HALF_UP);
     }
 
-    public BigDecimal getSubtotal() { return subtotal; }
-    public BigDecimal getDeliveryFee() { return deliveryFee; }
-    public BigDecimal getServiceFee() { return serviceFee; }
-    public BigDecimal getSmallOrderSurcharge() { return smallOrderSurcharge; }
-    public BigDecimal getTotal() { return total; }
+    public BigDecimal getSubtotal() {
+        return subtotal;
+    }
+
+    public BigDecimal getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public BigDecimal getServiceFee() {
+        return serviceFee;
+    }
+
+    public BigDecimal getSmallOrderSurcharge() {
+        return smallOrderSurcharge;
+    }
+
+    public BigDecimal getDiscount() {
+        return discount;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
 
     @Override
     public boolean equals(Object o) {
