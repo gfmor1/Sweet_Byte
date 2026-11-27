@@ -40,8 +40,7 @@ public class OrderServiceImpl implements OrderService {
                             OrderPermissionResolver permissionResolver,
                             DispatchService dispatchService,
                             PricingService pricingService,
-                            CreditRefundService creditRefundService,
-                            PromoService promoService) {
+                            CreditRefundService creditRefundService) {
         this.pricingService = pricingService;
         this.creditRefundService = creditRefundService;
         this.eventService = eventService;
