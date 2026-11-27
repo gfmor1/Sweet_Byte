@@ -47,22 +47,28 @@ export default function PaymentCardForm({ card, onSave, onRemove, busy }) {
 
   if (card && !editing) {
     return (
-      <div className={styles.cardBox}>
-        <div className={styles.savedCard}>
-          <div>
-            <div className={styles.cardFace}>{cardLabel(card)}</div>
-            <div className={styles.muted}>
-              {card.holder} · expires {String(card.expMonth).padStart(2, "0")}/{card.expYear}
-            </div>
+      <div className={styles.savedWrap}>
+        <div className={styles.cardVisual} aria-label={`Saved card ${cardLabel(card)}`}>
+          <div className={styles.cardBrand}>{card.brand || "Card"}</div>
+          <div className={styles.cardNumber}>•••• •••• •••• {card.last4 || "----"}</div>
+          <div className={styles.cardMeta}>
+            <span>
+              <small>Card holder</small>
+              {card.holder}
+            </span>
+            <span>
+              <small>Expires</small>
+              {String(card.expMonth).padStart(2, "0")}/{card.expYear}
+            </span>
           </div>
-          <div className={styles.actions}>
-            <button type="button" className={styles.btn} disabled={busy} onClick={() => setEditing(true)}>
-              Replace
-            </button>
-            <button type="button" className={`${styles.btn} ${styles.btnDanger}`} disabled={busy} onClick={onRemove}>
-              Remove
-            </button>
-          </div>
+        </div>
+        <div className={styles.actions}>
+          <button type="button" className={styles.btn} disabled={busy} onClick={() => setEditing(true)}>
+            Replace
+          </button>
+          <button type="button" className={`${styles.btn} ${styles.btnDanger}`} disabled={busy} onClick={onRemove}>
+            Remove
+          </button>
         </div>
       </div>
     );

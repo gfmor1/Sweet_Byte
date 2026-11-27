@@ -14,12 +14,53 @@ export default function RestaurantsPanel({ restaurants, orders, loaded, disabled
     return orders.filter((o) => o.restaurantId === r.id && active.includes(o.status)).length;
   }
 
-  const sorted = [...restaurants].sort((a, b) => {
-    const ao = a.status === "OPEN" ? 0 : 1;
-    const bo = b.status === "OPEN" ? 0 : 1;
-    if (ao !== bo) return ao - bo;
-    return String(a.name || "").localeCompare(String(b.name || ""));
-  });
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""));
+  const activeRestaurants = restaurants.filter((r) => r.status === "OPEN").sort(byName);
+  const otherRestaurants = restaurants.filter((r) => r.status !== "OPEN").sort(byName);
+
+  // The queue only matters for restaurants that are taking orders, so non-active ones show no queue.
+  function renderCard(r) {
+    const ctx = { restaurantStatus: r.status };
+    const canPause = can("OPERATOR", "pauseRestaurant", ctx);
+    const showPause = canPause || r.status === "OPEN";
+    const reason = explain("OPERATOR", showPause ? "pauseRestaurant" : "reopenRestaurant", ctx);
+    const allowed = can("OPERATOR", showPause ? "pauseRestaurant" : "reopenRestaurant", ctx);
+    return (
+      <article key={r.id} className={styles.card}>
+        <div className={styles.row}>
+          <h3 className={styles.sectionTitle}>{r.name}</h3>
+          <StatusPill status={r.status} />
+        </div>
+        {r.status === "OPEN" && <QueueBadge size={queueFor(r)} status={r.status} />}
+        <div className={styles.actions}>
+          <button
+            className={styles.btn}
+            disabled={disabled || !allowed}
+            title={reason || undefined}
+            onClick={() => (showPause ? onPause(r) : onReopen(r))}
+          >
+            {showPause ? "Pause" : "Reopen"}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  function renderGroup(title, list, emptyText) {
+    return (
+      <>
+        <div className={styles.sectionHead}>
+          <h3>{title}</h3>
+          <span className={`${styles.pill} ${styles.pillCount}`}>{list.length}</span>
+        </div>
+        {loaded && list.length === 0 ? (
+          <p className={styles.empty}>{emptyText}</p>
+        ) : (
+          <div className={styles.grid}>{list.map(renderCard)}</div>
+        )}
+      </>
+    );
+  }
 
   return (
     <section className={styles.section}>
@@ -28,34 +69,12 @@ export default function RestaurantsPanel({ restaurants, orders, loaded, disabled
         <span className={`${styles.pill} ${styles.pillCount}`}>{restaurants.length}</span>
       </div>
       {loaded && restaurants.length === 0 && <p className={styles.empty}>No restaurants available.</p>}
-      <div className={styles.grid}>
-        {sorted.map((r) => {
-          const ctx = { restaurantStatus: r.status };
-          const canPause = can("OPERATOR", "pauseRestaurant", ctx);
-          const showPause = canPause || r.status === "OPEN";
-          const reason = explain("OPERATOR", showPause ? "pauseRestaurant" : "reopenRestaurant", ctx);
-          const allowed = can("OPERATOR", showPause ? "pauseRestaurant" : "reopenRestaurant", ctx);
-          return (
-            <article key={r.id} className={styles.card}>
-              <div className={styles.row}>
-                <h3 className={styles.sectionTitle}>{r.name}</h3>
-                <StatusPill status={r.status} />
-              </div>
-              <QueueBadge size={queueFor(r)} status={r.status} />
-              <div className={styles.actions}>
-                <button
-                  className={styles.btn}
-                  disabled={disabled || !allowed}
-                  title={reason || undefined}
-                  onClick={() => (showPause ? onPause(r) : onReopen(r))}
-                >
-                  {showPause ? "Pause" : "Reopen"}
-                </button>
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      {restaurants.length > 0 && (
+        <>
+          {renderGroup("Active restaurants", activeRestaurants, "No restaurants are active right now.")}
+          {renderGroup("Other (paused or closed)", otherRestaurants, "No paused or closed restaurants.")}
+        </>
+      )}
     </section>
   );
 }

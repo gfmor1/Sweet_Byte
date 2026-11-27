@@ -9,6 +9,7 @@ import { money } from "./FareBreakdown";
 export default function OrderHistory({
   refreshKey = 0,
   showAmounts = true,
+  showPromo = false, // customer view only: promo code + discount columns
   ownerOrderIds = null, // array of order ids the viewer may see; null = no extra filter
   onLog,
 }) {
@@ -110,6 +111,8 @@ export default function OrderHistory({
                     <th>Type</th>
                     <th>Final state</th>
                     <th>Recorded</th>
+                    {showPromo && <th>Promo code</th>}
+                    {showPromo && <th>Discount</th>}
                     {showAmounts && <th>Amount</th>}
                   </tr>
                 </thead>
@@ -127,6 +130,15 @@ export default function OrderHistory({
                           ? new Date(entry.recordedAt).toLocaleString()
                           : "Unavailable"}
                       </td>
+
+                      {showPromo && <td>{entry.promoCode || "-"}</td>}
+                      {showPromo && (
+                        <td>
+                          {Number(entry.discount) > 0
+                            ? `-${money(entry.discount, entry.currency || "CAD")}`
+                            : "-"}
+                        </td>
+                      )}
 
                       {showAmounts && (
                         <td>

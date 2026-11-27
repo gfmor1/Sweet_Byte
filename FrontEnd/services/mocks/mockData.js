@@ -72,6 +72,12 @@ export function createSeed() {
 
   const subtotal = (o) => o.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const deliveredOrder = orders.find((o) => o.id === 4);
+  // Seeded promo usage so the operator ledger / history columns have data to show.
+  if (subtotal(deliveredOrder) >= 25) {
+    deliveredOrder.promoCode = "WELCOME5";
+    deliveredOrder.discount = 5;
+  }
+  const deliveredFare = () => calculateFare(subtotal(deliveredOrder), undefined, deliveredOrder.discount || 0);
 
   // Payment records (see FOUNDATION.md). Seeded rows belong to the shared "demo" customer.
   const card = { method: "CARD", brand: "VISA", last4: "4242", currency: "CAD" };
@@ -82,7 +88,7 @@ export function createSeed() {
       customerId: "demo",
       customerName: "Sam Customer",
       ...card,
-      amount: calculateFare(subtotal(deliveredOrder)).total,
+      amount: deliveredFare().total,
       status: "PAID",
       createdAt: ago(75 * MIN),
       refundedAt: null,
@@ -129,8 +135,10 @@ export function createSeed() {
         type: "CHARGE",
         finalState: "DELIVERED",
         recordedAt: deliveredOrder.deliveredAt,
-        amount: calculateFare(subtotal(deliveredOrder)).total,
+        amount: deliveredFare().total,
         currency: "CAD",
+        promoCode: deliveredOrder.promoCode ?? null,
+        discount: deliveredOrder.discount ?? null,
       },
     ],
     payments,

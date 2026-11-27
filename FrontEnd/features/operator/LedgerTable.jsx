@@ -77,6 +77,8 @@ export default function LedgerTable({ ledger, loaded }) {
                 <th>Entry</th>
                 <th>Order</th>
                 <th>Type</th>
+                <th>Promo code</th>
+                <th className={styles.num}>Discount</th>
                 <th className={styles.num}>Amount</th>
                 <th>Final status</th>
                 <th>Recorded</th>
@@ -94,6 +96,10 @@ export default function LedgerTable({ ledger, loaded }) {
                         {refund ? "REFUND" : "CHARGE"}
                       </span>
                     </td>
+                    <td data-label="Promo code">{e.promoCode || "-"}</td>
+                    <td data-label="Discount" className={styles.num}>
+                      {Number(e.discount) > 0 ? `-${money(e.discount, e.currency)}` : "-"}
+                    </td>
                     <td
                       data-label="Amount"
                       className={`${styles.num} ${refund ? styles.refundAmount : styles.chargeAmount}`}
@@ -110,7 +116,7 @@ export default function LedgerTable({ ledger, loaded }) {
             {shown.length > 0 && (
               <tfoot>
                 <tr>
-                  <td data-label="Totals" colSpan={3}>
+                  <td data-label="Totals" colSpan={5}>
                     Charges {money(charges, currency)} / Refunds -{money(refunds, currency)}
                   </td>
                   <td data-label="Net" className={styles.num}>

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import styles from "./addressPicker.module.css";
+
 export default function DeliveryAddressPicker({
   onChange,
   disabled = false,
@@ -137,13 +139,14 @@ export default function DeliveryAddressPicker({
   }
 
   return (
-    <fieldset disabled={disabled} style={{ margin: "1rem 0" }}>
-      <legend>{legend}</legend>
+    <fieldset disabled={disabled} className={`ui-card ${styles.box}`}>
+      <legend className={`ui-label ${styles.legend}`}>{legend}</legend>
 
-      <label htmlFor="delivery-search">
+      <label htmlFor="delivery-search" className={`ui-label ui-label-sm ${styles.label}`}>
         Street number, street name and city
       </label>
 
+      <div className={styles.searchRow}>
       <input
         id="delivery-search"
         value={query}
@@ -169,24 +172,20 @@ export default function DeliveryAddressPicker({
       >
         {loading ? "Searching..." : "Find address"}
       </button>
+      </div>
 
-      <p role="status">{message}</p>
+      <p role="status" className={styles.status}>{message}</p>
 
+      <div className={styles.results}>
       {results.map((address, index) => (
         <label
           key={index}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            margin: "0.5rem 0"
-          }}
+          className={`${styles.result} ${selected === address ? styles.resultSelected : ""}`}
         >
           <input
             type="radio"
             name="delivery-address"
             checked={selected === address}
-            style={{ width: "auto" }}
             onChange={() => {
               setSelected(address);
               updateDelivery(address, unit);
@@ -196,10 +195,11 @@ export default function DeliveryAddressPicker({
           {address.deliveryAddress}
         </label>
       ))}
+      </div>
 
       {showUnit && (
-        <>
-          <label htmlFor="delivery-unit">
+        <div className={styles.unit}>
+          <label htmlFor="delivery-unit" className={`ui-label ui-label-sm ${styles.label}`}>
             Apartment / unit (optional)
           </label>
 
@@ -213,17 +213,17 @@ export default function DeliveryAddressPicker({
               updateDelivery(selected, event.target.value);
             }}
           />
-        </>
+        </div>
       )}
 
       {selected && showUnit && (
-        <p>
+        <p className={styles.deliverTo}>
           Deliver to: {selected.deliveryAddress}
           {unit.trim() ? `, Unit ${unit.trim()}` : ""}
         </p>
       )}
 
-      <small>
+      <small className={styles.credit}>
         Address search by{" "}
         <a href="https://www.geoapify.com/">Geoapify</a>.
         Data ©{" "}

@@ -39,7 +39,8 @@ export async function placeOrder(
   restaurantId,
   selectedItems,
   delivery,
-  card
+  card,
+  promoCode = null
 ) {
   if (
     !delivery?.deliveryAddress?.trim() ||
@@ -74,7 +75,10 @@ export async function placeOrder(
       lines: selectedItems.map((item) => ({
         menuItemId: item.id,
         quantity: item.quantity
-      }))
+      })),
+
+      // TODO(promo-backend): assumed field name; the backend ignores/validates it once defined.
+      ...(promoCode ? { promoCode } : {})
     }
   });
 

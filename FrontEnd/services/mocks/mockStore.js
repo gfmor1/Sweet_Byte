@@ -79,7 +79,7 @@ function makeIdle(courier) {
 }
 
 function addLedgerEntry(order, type, finalState) {
-  const total = calculateFare(orderSubtotal(order)).total;
+  const total = orderFare(order).total;
   state.ledger.push({
     entryId: state.nextLedgerId++,
     orderId: order.id,
@@ -88,7 +88,14 @@ function addLedgerEntry(order, type, finalState) {
     recordedAt: new Date().toISOString(),
     amount: total,
     currency: PRICING_CONFIG.currency,
+    promoCode: order.promoCode ?? null,
+    discount: order.discount ?? null,
   });
+}
+
+function orderFare(order) {
+  const fare = calculateFare(orderSubtotal(order), PRICING_CONFIG, order.discount || 0);
+  return order.promoCode ? { ...fare, promoCode: order.promoCode } : fare;
 }
 
 function orderSubtotal(order) {
@@ -439,7 +446,7 @@ export const refundPayment = (paymentId) =>
 export const getPricingConfig = () => respond(() => ({ ...PRICING_CONFIG }));
 
 export const getOrderFare = (orderId) =>
-  respond(() => calculateFare(orderSubtotal(findOrder(orderId))));
+  respond(() => orderFare(findOrder(orderId)));
 
 export const getOrderSummary = (orderId) =>
   respond(() => {
@@ -449,7 +456,9 @@ export const getOrderSummary = (orderId) =>
       orderId: order.id,
       status: order.status,
       deliveredAt: order.deliveredAt,
-      fare: calculateFare(orderSubtotal(order)),
+      fare: orderFare(order),
+      promoCode: order.promoCode ?? null,
+      discount: order.discount ?? null,
     };
   });
 

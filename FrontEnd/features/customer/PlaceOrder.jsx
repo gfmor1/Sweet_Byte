@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { validatePromo } from "../../services/promoApi";
+
 import { can, explain } from "../../services/permissions";
 import { formatEnum } from "../../services/enumApi";
 import MenuThumb from "./MenuThumb";
@@ -13,7 +15,7 @@ import { isValidDelivery } from "./deliveryAddress.mjs";
 
 export default function PlaceOrder({
   restaurant,
-  onPlaceOrder,
+  onPlaceOrder: submitOrder,
   onDeliveryChange,
   role = "CUSTOMER",
   onLog,
@@ -22,6 +24,12 @@ export default function PlaceOrder({
   const [delivery, setDelivery] = useState(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Promo code: only one code per order. appliedPromo = { code, discount } once accepted.
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
 
   const submittingRef = useRef(false);
 
@@ -58,6 +66,73 @@ export default function PlaceOrder({
       sum + Number(item.price || 0) * quantities[item.id],
     0
   );
+
+  // Cart changed while a code is applied: re-check it, drop it with its refusal text if no longer valid.
+  const appliedCode = appliedPromo?.code;
+  useEffect(() => {
+    if (!appliedCode) return undefined;
+    let active = true;
+
+    validatePromo(appliedCode, subtotal)
+      .then((result) => {
+        if (active) setAppliedPromo(result);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setAppliedPromo(null);
+        setPromoError(err.message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [subtotal, appliedCode]);
+
+  async function handleApplyPromo() {
+    if (appliedPromo || promoBusy) return;
+
+    setPromoError("");
+
+    if (subtotal <= 0) {
+      setPromoError("Add items to your cart before applying a promo code.");
+      return;
+    }
+
+    setPromoBusy(true);
+    try {
+      const result = await validatePromo(promoInput, subtotal);
+      setAppliedPromo(result);
+      setPromoInput(result.code);
+      onLog?.({ command: "Apply promo code", result: `${result.code} applied` });
+    } catch (err) {
+      setPromoError(err.message);
+      onLog?.({ command: "Apply promo code", error: err.message });
+    } finally {
+      setPromoBusy(false);
+    }
+  }
+
+  // handleSubmit calls this: it adds the applied promo code (one per order) and clears it after success.
+  async function onPlaceOrder(orderLines, options) {
+    const successful = await submitOrder(orderLines, {
+      ...options,
+      promoCode: appliedPromo ? appliedPromo.code : null,
+    });
+
+    if (successful) {
+      setAppliedPromo(null);
+      setPromoInput("");
+      setPromoError("");
+    }
+
+    return successful;
+  }
+
+  function handleRemovePromo() {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoError("");
+  }
 
   const context = {
     restaurantStatus: restaurant.status,
@@ -257,8 +332,65 @@ export default function PlaceOrder({
           disabled={submitting}
         />
 
+        <div className={styles.promoBox}>
+        <label htmlFor="promo-code" className={`ui-label ${styles.promoLabel}`}>Promo code</label>
+        <div className={styles.promoRow}>
+          <input
+            id="promo-code"
+            type="text"
+            value={promoInput}
+            placeholder="Enter code"
+            autoComplete="off"
+            disabled={Boolean(appliedPromo) || promoBusy || submitting}
+            onChange={(event) => {
+              setPromoInput(event.target.value);
+              setPromoError("");
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleApplyPromo();
+              }
+            }}
+            aria-invalid={promoError ? true : undefined}
+            aria-describedby={promoError ? "promo-error" : undefined}
+          />
+          {appliedPromo ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={submitting}
+              onClick={handleRemovePromo}
+            >
+              Remove
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={promoBusy || submitting || !promoInput.trim()}
+              onClick={handleApplyPromo}
+            >
+              {promoBusy ? "Applying..." : "Apply"}
+            </button>
+          )}
+        </div>
+
+        {appliedPromo && (
+          <p className={styles.promoApplied} role="status">
+            {appliedPromo.code} applied: {money(appliedPromo.discount)} off
+          </p>
+        )}
+
+        {promoError && (
+          <p id="promo-error" className={styles.promoError} role="alert">
+            {promoError}
+          </p>
+        )}
+        </div>
+
         <FarePreview
           subtotal={subtotal}
+          promo={appliedPromo}
           onLog={onLog}
         />
 

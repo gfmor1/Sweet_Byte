@@ -12,15 +12,19 @@ export const PRICING_CONFIG = {
 
 const roundCents = (value) => Math.round(value * 100) / 100;
 
-// Fare breakdown for an items subtotal: subtotal + delivery + service (+ surcharge below threshold).
-export function calculateFare(subtotal, config = PRICING_CONFIG) {
+// Fare breakdown for an items subtotal: subtotal - promo discount + delivery + service (+ surcharge below threshold).
+// TODO(promo-backend): the discount is applied client-side for the preview only; the real total must come
+// from the backend (see docs/promo-frontend-todo.md). The small-order surcharge uses the pre-discount subtotal.
+export function calculateFare(subtotal, config = PRICING_CONFIG, discount = 0) {
+  const appliedDiscount = Math.min(Math.max(Number(discount) || 0, 0), subtotal);
   const smallOrderSurcharge = subtotal < config.smallOrderThreshold ? config.smallOrderSurcharge : 0;
   return {
     subtotal: roundCents(subtotal),
+    discount: roundCents(appliedDiscount),
     deliveryFee: config.deliveryFee,
     serviceFee: config.serviceFee,
     smallOrderSurcharge,
-    total: roundCents(subtotal + config.deliveryFee + config.serviceFee + smallOrderSurcharge),
+    total: roundCents(subtotal - appliedDiscount + config.deliveryFee + config.serviceFee + smallOrderSurcharge),
     currency: config.currency,
   };
 }
